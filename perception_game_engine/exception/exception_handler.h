@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "common.h"
-#include "crt/safe_crt.h"
+#include "../common.h"
+#include "../crt/safe_crt.h"
 
 class exception_handler {
 public:

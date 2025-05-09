@@ -18,7 +18,7 @@
     <ClCompile Include="entry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="exception_handler.cpp">
+    <ClCompile Include="exception\exception_handler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="memory\mem.cpp">
@@ -62,7 +62,7 @@
     <ClInclude Include="crt\safe_crt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="exception_handler.h">
+    <ClInclude Include="exception\exception_handler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="common.h">

@@ -145,7 +145,7 @@
     <ClCompile Include="engine\threading\thread_storage.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="exception\fail.cpp" />
-    <ClCompile Include="exception_handler.cpp" />
+    <ClCompile Include="exception\exception_handler.cpp" />
     <ClCompile Include="memory\addr.cpp" />
     <ClCompile Include="memory\mem.cpp" />
   </ItemGroup>
@@ -160,7 +160,7 @@
     <ClInclude Include="exception\fail.h" />
     <ClInclude Include="crt\s_vector.h" />
     <ClInclude Include="definitions.h" />
-    <ClInclude Include="exception_handler.h" />
+    <ClInclude Include="exception\exception_handler.h" />
     <ClInclude Include="memory\addr.h" />
     <ClInclude Include="memory\mem.h" />
     <ClInclude Include="crt\safe_crt.h" />

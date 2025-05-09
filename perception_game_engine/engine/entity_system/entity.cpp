@@ -4,11 +4,15 @@
 
 void entity_t::destroy()
 {
+	detach();
 	auto ts = get_current_thread_storage();
 	ts->current_layer = owner_layer;
 
 	__try {
 		ts->current_entity = this;
+
+		for (auto& c : components) 
+			c.destroy();
 
 		if (on_destroy)
 			on_destroy(_class);
@@ -19,7 +23,6 @@ void entity_t::destroy()
 }
 
 bool entity_t::construct(entity_layer_t* o,
-	uint32_t l,
 	const s_string& n,
 	construct_fn_t _on_create,
 	destruct_fn_t _on_destroy,
@@ -35,7 +38,6 @@ bool entity_t::construct(entity_layer_t* o,
 	user_data_t* data
 ) {
 	owner_layer = o;
-	layer = l;
 	name = s_pooled_string(n);
 	lookup_hash_by_name = name.hash;
 

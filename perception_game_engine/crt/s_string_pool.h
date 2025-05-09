@@ -4,11 +4,20 @@
 #include "atomic.h"
 #include "../serialize/fnva_hash.h"
 
-#pragma once
-#include "s_string.h"
-#include "s_node_list.h"
-#include "atomic.h"
-#include "../serialize/fnva_hash.h"
+struct pooled_string_t
+{
+	pooled_string_t() = default;
+	~pooled_string_t() = default;
+
+    pooled_string_t(const s_string& s) {
+        str = s;
+        hash = fnv1a32(s.c_str());
+    }
+
+    s_string str;
+	uint32_t hash = 0;
+
+};
 
 class string_pool_t {
 public:
@@ -20,11 +29,11 @@ public:
         unique_lock<critical_section> lock(&mutex);
 
         FOR_EACH_NODE(pool, existing) {
-            if (fnv1a32(existing.c_str()) == hash && existing == str)
-                return existing;
+            if (existing.hash == hash)
+                return existing.str;
         }
 
-        return pool.push_back_ref(s_string(str));
+        return pool.push_back_ref(s_string(str)).str;
     }
 
     const s_string& intern(const s_string& str) {
@@ -34,7 +43,7 @@ public:
     bool contains(const s_string& str) const {
         uint32_t hash = fnv1a32(str.c_str());
         FOR_EACH_NODE(pool, existing) {
-            if (fnv1a32(existing.c_str()) == hash && existing == str)
+            if (existing.hash == hash)
                 return true;
         }
         return false;
@@ -42,8 +51,8 @@ public:
 
     const s_string* get_name_by_hash(uint32_t hash) const {
         FOR_EACH_NODE(pool, existing) {
-            if (fnv1a32(existing.c_str()) == hash)
-                return &existing;
+            if (existing.hash == hash)
+                return &existing.str;
         }
         return nullptr;
     }
@@ -56,7 +65,7 @@ public:
     size_t size() const { return pool.size(); }
 
 private:
-    s_node_list_t<s_string> pool;
+    s_node_list_t<pooled_string_t> pool;
     critical_section mutex;
 };
 
@@ -78,6 +87,7 @@ struct s_pooled_string {
 
 	s_pooled_string() = default;
     ~s_pooled_string() = default;
+
 
     s_pooled_string(const char* raw) {
         hash = fnv1a32(raw);

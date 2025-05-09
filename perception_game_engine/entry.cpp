@@ -72,6 +72,8 @@ void run_component_hierarchy_test() {
 
     child->attach_to(root);
     root->attach_to(child);
+    child->attach_to(root);
+
     for (int i = 0; i < 1; ++i)
         g_entity_mgr.on_frame();
 
@@ -90,9 +92,50 @@ void run_component_hierarchy_test() {
 }
 
 
+void run_s_pooled_string_test() {
+    printf("[test] Running s_pooled_string test...\n");
+
+    const char* raw = "pooled_test_string";
+    s_string raw_s = s_string(raw);
+
+    // Construct from C-string
+    s_pooled_string a(raw);
+    s_pooled_string b(raw);
+    assert(a.str == b.str);
+    assert(a.hash == b.hash);
+    assert(strcmp(a.c_str(), raw) == 0);
+
+    // Construct from s_string
+    s_pooled_string c(raw_s);
+    assert(c.str == a.str);
+    assert(c.hash == a.hash);
+
+    // Copy constructor
+    s_pooled_string d = a;
+    assert(d.str == a.str);
+    assert(d.hash == a.hash);
+
+    // Assignment operator
+    s_pooled_string e;
+    e = b;
+    assert(e.str == b.str);
+    assert(e.hash == b.hash);
+
+    // Implicit conversions
+    const char* cstr = a;
+    const s_string& ss = a;
+    assert(strcmp(cstr, "pooled_test_string") == 0);
+    assert(ss == "pooled_test_string");
+
+    printf("[result] Pooled A: %s (hash = %u)\n", a.c_str(), a.hash);
+    printf("[test] s_pooled_string test passed.\n");
+}
+
+
 int main()
 {
-    run_component_hierarchy_test();
+    run_s_pooled_string_test();
+   // run_component_hierarchy_test();
 //	protect_region = VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     system("pause");
 	return 0;

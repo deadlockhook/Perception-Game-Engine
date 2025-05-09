@@ -77,11 +77,18 @@ bool entity_t::construct(entity_layer_t* o,
 
 void entity_t::attach_to(entity_t* e) {
 
-	if (e == this || parent == e)
+	if (!e || e == this || parent == e)
 		return;
 
-	if (parent)
-	{
+	for (auto* n = children.begin(); n != children.end(); n = n->next) {
+		if (n->value == e) {
+			children.remove_node(n);
+			e->parent = nullptr;
+			break;
+		}
+	}
+
+	if (parent) {
 		auto& siblings = parent->children;
 		for (auto* n = siblings.begin(); n != siblings.end(); n = n->next) {
 			if (n->value == this) {
@@ -89,16 +96,20 @@ void entity_t::attach_to(entity_t* e) {
 				break;
 			}
 		}
-
 		parent = nullptr;
 	}
 
-	if (e && !parent) {
-		parent = e;
-		e->children.push_back(this);
+	for (auto* n = e->children.begin(); n != e->children.end(); n = n->next) {
+		if (n->value == this) {
+			e->children.remove_node(n);
+			break;
+		}
 	}
 
+	parent = e;
+	e->children.push_back(this);
 }
+
 
 void entity_t::detach() {
 	if (parent) {

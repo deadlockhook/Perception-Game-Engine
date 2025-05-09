@@ -4,6 +4,7 @@
 #include "../../crt/s_map.h"
 #include "../../serialize/fnva_hash.h"
 #include "../../exception/fail.h"
+#include "../../crt/s_string_pool.h"
 
 using class_t = void*;
 using user_data_t = void*;
@@ -34,10 +35,10 @@ using on_deserialize_fn_t = void(*)(class_t*, deserializer_t*);
 using on_debug_draw_fn_t = void(*)(class_t*, render_context_t*);
 using on_ui_inspector_fn_t = void(*)(class_t*, render_context_t*);
 
-class entity_callbacks_t
+class component_callbacks_t
 {
 public:
-	entity_callbacks_t() = default;
+	component_callbacks_t() = default;
 public:
 	//add try and catch properly here
 	__forceinline class_t* call_construct(user_data_t* data) const { if (on_create) return on_create(data); return nullptr; }
@@ -70,7 +71,19 @@ public:
 	on_ui_inspector_fn_t on_ui_inspector; //editor inspector panel
 };
 
-class entity_t : public entity_callbacks_t {
+class component_t : public component_callbacks_t
+{
+public:
+
+	void destroy();
+public:
+	s_pooled_string name;
+	uint32_t lookup_hash_by_name;
+	entity_t* owner = nullptr;
+	class_t* _class = nullptr;
+};
+
+class entity_t : public component_callbacks_t {
 public:
 	entity_t() = default;
 	~entity_t() = default;
@@ -103,7 +116,7 @@ public:
 
 public:
 	uint32_t layer;
-	s_string name;
+	s_pooled_string name;
 	uint32_t lookup_hash_by_name;
 	class_t* _class = nullptr; //passed onto callbacks
 	user_data_t* user_data = nullptr; //passed onto callbacks
@@ -111,6 +124,7 @@ public:
 	entity_t* parent = nullptr; //parent entity
 	entity_layer_t* owner_layer = nullptr; //layer pointer
 	s_vector<entity_t*> children;
+	s_vector<component_t*> components; //components attached to this entity
 };
 
 class entity_layer_t
@@ -144,7 +158,7 @@ public:
 	bool remove_entity_by_class(class_t* class_ptr);
 	void destroy();
 public:
-	s_string name;
+	s_pooled_string name;
 	uint32_t lookup_hash_by_name = 0;
 public:
 	s_map<uint32_t, s_vector<entity_t>> entities;

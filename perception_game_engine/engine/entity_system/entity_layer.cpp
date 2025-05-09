@@ -3,8 +3,8 @@
 
 void entity_layer_t::init_layer(const s_string& n)
 {
-	name = n;
-	lookup_hash_by_name = fnv1a32(n.c_str());
+	name = s_pooled_string(n);
+	lookup_hash_by_name = name.hash;
 }
 
 void entity_layer_t::create_entity(

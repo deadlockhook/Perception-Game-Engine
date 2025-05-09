@@ -137,6 +137,8 @@
   <ItemGroup>
     <ClCompile Include="crt\safe_crt.cpp" />
     <ClCompile Include="crt\s_string.cpp" />
+    <ClCompile Include="crt\s_string_pool.cpp" />
+    <ClCompile Include="engine\entity_system\component.cpp" />
     <ClCompile Include="engine\entity_system\entity.cpp" />
     <ClCompile Include="engine\entity_system\entity_layer.cpp" />
     <ClCompile Include="engine\entity_system\entity_manager.cpp" />
@@ -152,6 +154,7 @@
     <ClInclude Include="crt\atomic.h" />
     <ClInclude Include="crt\inline_crt.h" />
     <ClInclude Include="crt\s_map.h" />
+    <ClInclude Include="crt\s_string_pool.h" />
     <ClInclude Include="engine\entity_system\entity_system.h" />
     <ClInclude Include="engine\threading\thread_storage.h" />
     <ClInclude Include="exception\fail.h" />

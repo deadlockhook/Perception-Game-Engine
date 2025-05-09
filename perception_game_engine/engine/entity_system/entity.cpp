@@ -1,5 +1,6 @@
 #include "entity_system.h"
 #include "../threading/thread_storage.h"
+#include "../../crt/s_string_pool.h"
 
 void entity_t::destroy()
 {
@@ -35,8 +36,9 @@ bool entity_t::construct(entity_layer_t* o,
 ) {
 	owner_layer = o;
 	layer = l;
-	name = n;
-	lookup_hash_by_name = fnv1a32(n.c_str());
+	name = s_pooled_string(n);
+	lookup_hash_by_name = name.hash;
+
 	user_data = data;
 
 	on_create = _on_create;

@@ -5,9 +5,6 @@
 #include "../../serialize/fnva_hash.h"
 #include "../../exception/fail.h"
 
-typedef class entity_callbacks_t entity_header_t;
-using uint32_t = uint32_t;
-using layer_id_t = uint32_t;
 using class_t = void*;
 using user_data_t = void*;
 
@@ -17,8 +14,10 @@ typedef class render_context_t;
 typedef class ui_context_t;
 typedef class input_context_t;
 typedef class entity_t;
+typedef class component_t;
+typedef void(*entity_iter_fn_t)(entity_t* child, void* userdata);
 
-using construct_fn_t = class_t*(*)(user_data_t*);
+using construct_fn_t = class_t * (*)(user_data_t*);
 using destruct_fn_t = class_t(*)(class_t*);
 
 using on_input_receive_fn_t = void(*)(class_t*, input_context_t*);
@@ -42,7 +41,7 @@ public:
 	//add try and catch properly here
 	__forceinline class_t* call_construct(user_data_t* data) const { if (on_create) return on_create(data); return nullptr; }
 	__forceinline void call_destruct(class_t* e) const { if (on_destroy) on_destroy(e); }
-	__forceinline void call_input(class_t* e, input_context_t* i) const { if (on_input_receive) on_input_receive(e,i); }
+	__forceinline void call_input(class_t* e, input_context_t* i) const { if (on_input_receive) on_input_receive(e, i); }
 	__forceinline void call_physics(class_t* e) const { if (on_physics_update) on_physics_update(e); }
 	__forceinline void call_frame(class_t* e) const { if (on_frame) on_frame(e); }
 	__forceinline void call_render(class_t* e, render_context_t* ctx) const { if (on_render) on_render(e, ctx); }
@@ -132,7 +131,48 @@ public:
 		return _class != nullptr;
 	}
 
+	void attach_to(entity_t* e) {
+		if (e && !parent) {
+			parent = e;
+			e->children.push_back(this);
+		}
+	}
 
+	void detach() {
+		if (parent) {
+			auto& siblings = parent->children;
+			for (size_t i = 0; i < siblings.count(); ++i) {
+				if (siblings[i] == this) {
+					siblings.erase_at(i);
+					break;
+				}
+			}
+			parent = nullptr;
+		}
+	}
+
+	void reparent(entity_t* new_parent) {
+
+		if (new_parent == this || parent == new_parent)
+			return;
+
+		detach();
+		attach_to(new_parent);
+	}
+
+	entity_t* get_root() {
+		entity_t* current = this;
+		while (current->parent)
+			current = current->parent;
+		return current;
+	}
+
+	void for_each_child_recursive(entity_iter_fn_t fn, void* userdata) {
+		for (entity_t* child : children) {
+			fn(child, userdata);
+			child->for_each_child_recursive(fn, userdata);
+		}
+	}
 
 public:
 	uint32_t layer;
@@ -140,6 +180,9 @@ public:
 	uint32_t lookup_hash_by_name;
 	class_t* _class = nullptr; //passed onto callbacks
 	user_data_t* user_data = nullptr; //passed onto callbacks
+public:
+	entity_t* parent = nullptr; //parent entity
+	s_vector<entity_t*> children;
 };
 
 class entity_manager_t
@@ -148,11 +191,7 @@ public:
 	entity_manager_t() = default;
 	~entity_manager_t() = default;
 
-	void init_manager(const s_string& n)
-	{
-		name = n;
-		lookup_hash_by_name = fnv1a32(n.c_str());
-	}
+	void init_manager(const s_string& n);
 
 	void create_entity(
 		uint32_t type,
@@ -169,100 +208,18 @@ public:
 		on_debug_draw_fn_t on_debug_draw = nullptr,
 		on_ui_inspector_fn_t on_ui_inspector = nullptr,
 		user_data_t* data = nullptr
-	)
-	{
-		entity_t entity;
-		if (entity.construct(type, name, on_create, on_destroy, on_input_receive, on_physics_update, on_frame, on_render, on_render_ui, on_serialize, on_deserialize, on_debug_draw, on_ui_inspector, data)) {
-			auto& entity_list = entities[type];
-			entity_list.push_back(entity);
-			return;
-		}
-
-		on_fail("Failed to create entity: %s", name.c_str());
-	}
-
-	entity_t* get_entity_by_class(class_t* class_ptr)
-	{
-		for (auto& entity : entities) {
-			for (auto& e : entity.value) {
-				if (e._class == class_ptr) {
-					return &e;
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	entity_t* get_entity_by_name(const s_string& name)
-	{
-		uint32_t hash = fnv1a32(name.c_str());
-		for (auto& entity : entities) {
-			for (auto& e : entity.value) {
-				if (e.lookup_hash_by_name == hash) {
-					return &e;
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	s_vector<entity_t*> get_entities_by_name(const s_string& name)
-	{
-		uint32_t hash = fnv1a32(name.c_str());
-
-		s_vector<entity_t*> result;
-		
-		for (auto& entity : entities) {
-			for (auto& e : entity.value) {
-				if (e.lookup_hash_by_name == hash) {
-					result.push_back(&e);
-				}
-			}
-		}
-
-		return result;
-	}
-
-	s_vector<entity_t*> get_entities_of_type(uint32_t type)
-	{
-		s_vector<entity_t*> result;
-		auto it = entities.find(type);
-		if (!it) return result;
-
-		for (int i = 0; i < it->count(); i++)
-			result.push_back(&it->at(i));
-
-		return result;
-	}
-
-	bool remove_entity_by_class(class_t* class_ptr)
-	{
-		for (auto& pair : entities) {
-			auto& vec = pair.value;
-			for (size_t i = 0; i < vec.count(); ++i) {
-				if (vec[i]._class == class_ptr) {
-					vec[i].destroy();
-					vec.erase_at(i);
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	void destroy()
-	{
-		for (auto& entity : entities) {
-			for (auto& e : entity.value) {
-				e.destroy();
-			}
-		}
-	}
+	);
+	entity_t* get_entity_by_class(class_t* class_ptr);
+	entity_t* get_entity_by_name(const s_string& name);
+	s_vector<entity_t*> get_entities_by_name(const s_string& name);
+	s_vector<entity_t*> get_entities_of_type(uint32_t type);
+	bool remove_entity_by_class(class_t* class_ptr);
+	void destroy();
 public:
 	s_string name;
-	uint32_t lookup_hash_by_name;
+	uint32_t lookup_hash_by_name = 0;
 public:
-	s_map<uint32_t, s_vector<entity_t>> entities; 
+	s_map<uint32_t, s_vector<entity_t>> entities;
 };
 
 class master_entity_manager
@@ -271,92 +228,28 @@ public:
 	master_entity_manager() = default;
 	~master_entity_manager() = default;
 
-	layer_id_t create_layer(const s_string& name)
-	{
-		auto manager = &layers.push_back(entity_manager_t());
-		
-		if (!manager) 
-			return -1;
+	uint32_t create_layer(const s_string& name);
 
-		manager->init_manager(name);
-		return layers.count() - 1;
-	}
+	void destroy_layer(uint32_t id);
 
-	void destroy_layer(layer_id_t id)
-	{
-		if (id >= layers.count())
-			return;
+	entity_manager_t* get_layer(uint32_t id);
+	entity_manager_t* get_layer_by_name(const s_string& name);
 
-		layers[id].destroy();
-		layers.erase_at(id);
-	}
+	bool has_layer(const s_string& name);
 
-	entity_manager_t* get_layer(layer_id_t id)
-	{
-		if (id >= layers.count()) return nullptr;
-		return &layers[id];
-	}
-
-	entity_manager_t* get_layer_by_name(const s_string& name) {
-		uint32_t hash = fnv1a32(name.c_str());
-		for (auto& layer : layers)
-			if (layer.lookup_hash_by_name == hash)
-				return &layer;
-		return nullptr;
-	}
-
-	bool has_layer(const s_string& name) {
-		return get_layer_by_name(name) != nullptr;
-	}
-
-	void on_frame() {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_frame && e._class)
-						e.on_frame(e._class);
-	}
-
-	void on_physics_update() {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_physics_update && e._class)
-						e.on_physics_update(e._class);
-	}
-
-	void on_input_receive(input_context_t* ctx) {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_input_receive && e._class)
-						e.on_input_receive(e._class, ctx);
-	}
-
-	void on_render(render_context_t* ctx) {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_render && e._class)
-						e.on_render(e._class, ctx);
-	}
-
-	void on_render_ui(render_context_t* ctx) {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_render_ui && e._class)
-						e.on_render_ui(e._class, ctx);
-	}
-
-	void on_debug_draw(render_context_t* ctx) {
-		for (auto& layer : layers)
-			for (auto& [_, vec] : layer.entities)
-				for (auto& e : vec)
-					if (e.on_debug_draw && e._class)
-						e.on_debug_draw(e._class, ctx);
-	}
+	void on_frame();
+	void on_physics_update();
+	void on_input_receive(input_context_t* ctx);
+	void on_render(render_context_t* ctx);
+	void on_render_ui(render_context_t* ctx);
+	void on_debug_draw(render_context_t* ctx);
+	void on_ui_inspector(render_context_t* ctx);
+	void on_serialize(serializer_t* s);
+	void on_deserialize(deserializer_t* d);
+	void destroy();
 
 public:
 	s_vector<entity_manager_t> layers;
 };
+
+extern master_entity_manager g_master_entity_manager;

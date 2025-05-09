@@ -137,6 +137,8 @@
   <ItemGroup>
     <ClCompile Include="crt\safe_crt.cpp" />
     <ClCompile Include="crt\s_string.cpp" />
+    <ClCompile Include="engine\entity_system\entity_manager.cpp" />
+    <ClCompile Include="engine\entity_system\master_entity_manager.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="exception\fail.cpp" />
     <ClCompile Include="exception_handler.cpp" />

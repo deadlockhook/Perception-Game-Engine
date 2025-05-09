@@ -30,6 +30,18 @@ public:
         return &n->value;
     }
 
+    T& push_back_ref(const T& value) {
+        auto* n = new node_t<T>{ value };
+        if (!head) head = tail = n;
+        else {
+            tail->next = n;
+            n->prev = tail;
+            tail = n;
+        }
+        ++count;
+        return n->value;
+    }
+
     T* push_front(const T& value) {
         auto* n = new node_t<T>{ value };
         if (!head) {

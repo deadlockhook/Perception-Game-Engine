@@ -4,21 +4,25 @@
 
 entity_manager g_entity_mgr = entity_manager();
 
-uint32_t entity_manager::create_layer(const s_string& name)
+entity_layer_t* entity_manager::create_layer(const s_string& name)
 {
 	entity_layer_t layer;
 	layer.init_layer(name);
-	layers.push_back(layer);
-
-	uint32_t index = 0;
-	for (auto* n = layers.begin(); n != layers.end(); n = n->next, ++index) {
-		if (&n->value == &layers.rbegin()->value)
-			return index;
-	}
-
-	return -1; 
+	return layers.push_back(layer);
 }
+void entity_manager::destroy_layer(entity_layer_t* layer)
+{
+	if (!layer)
+		return;
 
+	for (auto* n = layers.begin(); n != layers.end(); n = n->next) {
+		if (&n->value == layer) {
+			n->value.destroy();
+			layers.remove_node(n);
+			return;
+		}
+	}
+}
 void entity_manager::destroy_layer(uint32_t id)
 {
 	uint32_t index = 0;
@@ -65,15 +69,19 @@ void entity_manager::on_frame() {
 
 		for (auto* e_node = layer.entities.begin(); e_node != layer.entities.end(); e_node = e_node->next) {
 			auto& e = e_node->value;
+			
+			std::cout << "Current entity: " << (void*)(&e)->name.c_str() << " ptr " << &e << std::endl;
 
 			if (e.parent)
 				continue;
 
+		
 			ts->current_entity = &e;
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_frame && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_frame) {
 					__try { comp.on_frame(comp._class); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
 						on_fail("component on_frame failed: %s entity: %s", comp.name.c_str(), e.name.c_str());
@@ -81,7 +89,7 @@ void entity_manager::on_frame() {
 				}
 			}
 
-			if (e.on_frame && e._class) {
+			if (e.on_frame ) {
 				__try { e.on_frame(e._class); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
 					on_fail("on_frame failed: %s", e.name.c_str());
@@ -93,7 +101,8 @@ void entity_manager::on_frame() {
 
 				for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 					auto& comp = c_node->value;
-					if (comp.on_frame && comp._class) {
+					storage->current_component = &comp;
+					if (comp.on_frame) {
 						__try { comp.on_frame(comp._class); }
 						__except (EXCEPTION_EXECUTE_HANDLER) {
 							on_fail("child component on_frame failed: %s child entity:%s owner entity:%s",
@@ -102,7 +111,7 @@ void entity_manager::on_frame() {
 					}
 				}
 
-				if (child->on_frame && child->_class) {
+				if (child->on_frame) {
 					__try { child->on_frame(child->_class); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
 						on_fail("child on_frame failed: %s", child->name.c_str());
@@ -131,7 +140,8 @@ void entity_manager::on_physics_update() {
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_physics_update && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_physics_update) {
 					__try { comp.on_physics_update(comp._class); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
 						on_fail("component on_physics_update failed: %s entity: %s", comp.name.c_str(), e.name.c_str());
@@ -139,7 +149,7 @@ void entity_manager::on_physics_update() {
 				}
 			}
 
-			if (e.on_physics_update && e._class) {
+			if (e.on_physics_update ) {
 				__try { e.on_physics_update(e._class); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
 					on_fail("on_physics_update failed: %s", e.name.c_str());
@@ -151,7 +161,8 @@ void entity_manager::on_physics_update() {
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_physics_update && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_physics_update) {
 							storage->current_entity = child;
 							__try { comp.on_physics_update(comp._class); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -159,7 +170,7 @@ void entity_manager::on_physics_update() {
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_physics_update(child->_class); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -189,7 +200,8 @@ void entity_manager::on_input_receive(input_context_t* ctx) {
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_input_receive && comp._class) {;
+				ts->current_component = &comp;
+				if (comp.on_input_receive) {;
 					__try { comp.on_input_receive(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
 						on_fail("component on_input_receive failed: %s entity: %s", comp.name.c_str(), e.name.c_str());
@@ -197,7 +209,7 @@ void entity_manager::on_input_receive(input_context_t* ctx) {
 				}
 			}
 
-			if (e.on_input_receive && e._class) {
+			if (e.on_input_receive ) {
 			
 				__try { e.on_input_receive(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -210,7 +222,8 @@ void entity_manager::on_input_receive(input_context_t* ctx) {
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_input_receive && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_input_receive) {
 							storage->current_entity = child;
 							__try { comp.on_input_receive(comp._class, (input_context_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -218,7 +231,7 @@ void entity_manager::on_input_receive(input_context_t* ctx) {
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_input_receive(child->_class, (input_context_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -249,7 +262,8 @@ void entity_manager::on_render(render_context_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_render && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_render) {
 					;
 					__try { comp.on_render(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -258,7 +272,7 @@ void entity_manager::on_render(render_context_t* ctx)
 				}
 			}
 
-			if (e.on_render && e._class) {
+			if (e.on_render ) {
 		
 				__try { e.on_render(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -271,7 +285,8 @@ void entity_manager::on_render(render_context_t* ctx)
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_render && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_render) {
 							storage->current_entity = child;
 							__try { comp.on_render(comp._class, (render_context_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -279,7 +294,7 @@ void entity_manager::on_render(render_context_t* ctx)
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_render(child->_class, (render_context_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -310,7 +325,8 @@ void entity_manager::on_render_ui(render_context_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_render_ui && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_render_ui) {
 					;
 					__try { comp.on_render_ui(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -319,7 +335,7 @@ void entity_manager::on_render_ui(render_context_t* ctx)
 				}
 			}
 
-			if (e.on_render_ui && e._class) {
+			if (e.on_render_ui ) {
 		
 				__try { e.on_render_ui(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -332,7 +348,8 @@ void entity_manager::on_render_ui(render_context_t* ctx)
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_render_ui && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_render_ui) {
 							storage->current_entity = child;
 							__try { comp.on_render_ui(comp._class, (render_context_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -340,7 +357,7 @@ void entity_manager::on_render_ui(render_context_t* ctx)
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_render_ui(child->_class, (render_context_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -372,7 +389,8 @@ void entity_manager::on_debug_draw(render_context_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_debug_draw && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_debug_draw) {
 					;
 					__try { comp.on_debug_draw(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -381,7 +399,7 @@ void entity_manager::on_debug_draw(render_context_t* ctx)
 				}
 			}
 
-			if (e.on_debug_draw && e._class) {
+			if (e.on_debug_draw ) {
 			
 				__try { e.on_debug_draw(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -394,7 +412,8 @@ void entity_manager::on_debug_draw(render_context_t* ctx)
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_debug_draw && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_debug_draw) {
 							storage->current_entity = child;
 							__try { comp.on_debug_draw(comp._class, (render_context_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -402,7 +421,7 @@ void entity_manager::on_debug_draw(render_context_t* ctx)
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_debug_draw(child->_class, (render_context_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -433,7 +452,8 @@ void entity_manager::on_ui_inspector(render_context_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_ui_inspector && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_ui_inspector) {
 					;
 					__try { comp.on_ui_inspector(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -442,7 +462,7 @@ void entity_manager::on_ui_inspector(render_context_t* ctx)
 				}
 			}
 
-			if (e.on_ui_inspector && e._class) {
+			if (e.on_ui_inspector ) {
 		
 				__try { e.on_ui_inspector(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -455,7 +475,8 @@ void entity_manager::on_ui_inspector(render_context_t* ctx)
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_ui_inspector && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_ui_inspector) {
 							storage->current_entity = child;
 							__try { comp.on_ui_inspector(comp._class, (render_context_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -464,7 +485,7 @@ void entity_manager::on_ui_inspector(render_context_t* ctx)
 						}
 					}
 
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_ui_inspector(child->_class, (render_context_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -495,7 +516,8 @@ void entity_manager::on_serialize(serializer_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_serialize && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_serialize) {
 					;
 					__try { comp.on_serialize(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -504,7 +526,7 @@ void entity_manager::on_serialize(serializer_t* ctx)
 				}
 			}
 
-			if (e.on_serialize && e._class) {
+			if (e.on_serialize ) {
 			
 				__try { e.on_serialize(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -517,7 +539,8 @@ void entity_manager::on_serialize(serializer_t* ctx)
 					
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_serialize && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_serialize) {
 							storage->current_entity = child;
 							__try { comp.on_serialize(comp._class, (serializer_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -525,7 +548,7 @@ void entity_manager::on_serialize(serializer_t* ctx)
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_serialize(child->_class, (serializer_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -556,7 +579,8 @@ void entity_manager::on_deserialize(deserializer_t* ctx)
 
 			for (auto* c_node = e.components.begin(); c_node != e.components.end(); c_node = c_node->next) {
 				auto& comp = c_node->value;
-				if (comp.on_deserialize && comp._class) {
+				ts->current_component = &comp;
+				if (comp.on_deserialize) {
 					;
 					__try { comp.on_deserialize(comp._class, ctx); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -565,7 +589,7 @@ void entity_manager::on_deserialize(deserializer_t* ctx)
 				}
 			}
 
-			if (e.on_deserialize && e._class) {
+			if (e.on_deserialize ) {
 				__try { e.on_deserialize(e._class, ctx); }
 				__except (EXCEPTION_EXECUTE_HANDLER) {
 					on_fail("on_deserialize failed: %s", e.name.c_str());
@@ -577,7 +601,8 @@ void entity_manager::on_deserialize(deserializer_t* ctx)
 
 					for (auto* c_node = child->components.begin(); c_node != child->components.end(); c_node = c_node->next) {
 						auto& comp = c_node->value;
-						if (comp.on_deserialize && comp._class) {
+						storage->current_component = &comp;
+						if (comp.on_deserialize) {
 							storage->current_entity = child;
 							__try { comp.on_deserialize(comp._class, (deserializer_t*)ctx_ptr); }
 							__except (EXCEPTION_EXECUTE_HANDLER) {
@@ -585,7 +610,7 @@ void entity_manager::on_deserialize(deserializer_t* ctx)
 							}
 						}
 					}
-					if (child->on_frame && child->_class) {
+					if (child->on_frame) {
 
 					__try { child->on_deserialize(child->_class, (deserializer_t*)ctx_ptr); }
 					__except (EXCEPTION_EXECUTE_HANDLER) {

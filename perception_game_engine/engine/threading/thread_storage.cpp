@@ -7,7 +7,14 @@ thread_storage_t* get_current_thread_storage()
 {
 	return &threads_storage[GetCurrentThreadId()];
 }
+component_t* get_current_component()
+{
+	thread_storage_t* ts = get_current_thread_storage();
 
+	if (ts)
+		return ts->current_component;
+	return nullptr;
+}
 entity_t* get_current_entity()
 {
 	thread_storage_t* ts = get_current_thread_storage();

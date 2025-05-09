@@ -12,4 +12,5 @@ struct thread_storage_t
 thread_storage_t* get_current_thread_storage();
 
 entity_t* get_current_entity();
+component_t* get_current_component();
 entity_layer_t* get_current_layer();

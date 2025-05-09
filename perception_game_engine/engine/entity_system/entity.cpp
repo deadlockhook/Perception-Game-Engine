@@ -72,10 +72,26 @@ bool entity_t::construct(entity_layer_t* o,
 		return false;
 	}
 
-	return _class != nullptr;
+	return true;
 }
 
 void entity_t::attach_to(entity_t* e) {
+
+	if (e == this || parent == e)
+		return;
+
+	if (parent)
+	{
+		auto& siblings = parent->children;
+		for (auto* n = siblings.begin(); n != siblings.end(); n = n->next) {
+			if (n->value == this) {
+				siblings.remove_node(n);
+				break;
+			}
+		}
+
+		parent = nullptr;
+	}
 
 	if (e && !parent) {
 		parent = e;
@@ -98,14 +114,6 @@ void entity_t::detach() {
 }
 
 
-void entity_t::reparent(entity_t* new_parent) {
-
-	if (new_parent == this || parent == new_parent)
-		return;
-
-	detach();
-	attach_to(new_parent);
-}
 
 entity_t* entity_t::get_root() {
 	entity_t* current = this;

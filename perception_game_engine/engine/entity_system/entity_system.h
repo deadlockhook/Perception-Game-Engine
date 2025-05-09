@@ -21,7 +21,7 @@ typedef class component_t;
 typedef void(*entity_iter_fn_t)(struct thread_storage_t* storage, entity_t* child, void* userdata);
 
 using construct_fn_t = class_t * (*)(user_data_t*);
-using destruct_fn_t = class_t(*)(class_t*);
+using destruct_fn_t = void(*)(class_t*);
 
 using on_input_receive_fn_t = void(*)(class_t*, input_context_t*);
 using on_physics_update_fn_t = void(*)(class_t*);
@@ -113,7 +113,6 @@ public:
 
 	void attach_to(entity_t* e);
 	void detach();
-	void reparent(entity_t* new_parent);
 	entity_t* get_root();
 	void for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata);
 	
@@ -195,11 +194,12 @@ public:
 	entity_manager() = default;
 	~entity_manager() = default;
 
-	uint32_t create_layer(const s_string& name);
+	entity_layer_t* create_layer(const s_string& name);
 
-	void destroy_layer(uint32_t id);
+	void destroy_layer(entity_layer_t* layer);
+	void destroy_layer(uint32_t index);
 
-	entity_layer_t* get_layer(uint32_t id);
+	entity_layer_t* get_layer(uint32_t index);
 	entity_layer_t* get_layer_by_name(const s_string& name);
 
 	bool has_layer(const s_string& name);

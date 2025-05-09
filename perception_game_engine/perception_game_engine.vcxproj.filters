@@ -104,5 +104,8 @@
     <ClInclude Include="crt\s_string_pool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="crt\s_node_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -5,6 +5,7 @@
 #include "../../serialize/fnva_hash.h"
 #include "../../exception/fail.h"
 #include "../../crt/s_string_pool.h"
+#include "../../crt/s_node_list.h"
 
 using class_t = void*;
 using user_data_t = void*;
@@ -130,44 +131,17 @@ public:
 		on_debug_draw_fn_t on_debug_draw = nullptr,
 		on_ui_inspector_fn_t on_ui_inspector = nullptr,
 		user_data_t* data = nullptr
-	)
-	{
-		auto string_hash = fnv1a32(name.c_str());
+	);
 
-		for (auto& c : components) {
-			if (c.lookup_hash_by_name == string_hash)
-			{
-				on_fail("Failed to create component: %s, already exists", name.c_str());
-				return false;
-			}
-		}
+	bool remove_component(const s_string& name);
 
-		component_t component;
-		if (component.construct(this, name, on_create, on_destroy, on_input_receive, on_physics_update, on_frame, on_render, on_render_ui, on_serialize, on_deserialize, on_debug_draw, on_ui_inspector, data)) {
-			components.push_back(component);
-			return true;
-		}
-		on_fail("Failed to create component: %s", name.c_str());
-		return true;
+	component_t* get_component(const s_string& name);
+
+	template<typename T>
+	T* get_component_class(const s_string& name) {
+		auto* c = get_component(name);
+		return c ? reinterpret_cast<T*>(c->_class) : nullptr;
 	}
-
-	bool remove_component(const s_string& name)
-	{
-		auto string_hash = fnv1a32(name.c_str());
-
-		for (size_t i = 0; i < components.count(); ++i) {
-			if (components[i].lookup_hash_by_name == string_hash) {
-				components[i].destroy();
-				components.erase_at(i);
-				return true;
-			}
-		}
-
-		on_fail("Failed to remove component: %s", name.c_str());
-		return false;
-	}
-
-
 public:
 	s_pooled_string name;
 	uint32_t lookup_hash_by_name;
@@ -176,8 +150,8 @@ public:
 public:
 	entity_t* parent = nullptr; //parent entity
 	entity_layer_t* owner_layer = nullptr; //layer pointer
-	s_vector<entity_t*> children;
-	s_vector<component_t> components; //components attached to this entity
+	s_node_list_t<entity_t*> children;
+	s_node_list_t<component_t> components; //components attached to this entity
 };
 
 class entity_layer_t
@@ -188,7 +162,7 @@ public:
 
 	void init_layer(const s_string& n);
 
-	void create_entity(
+	entity_t* create_entity(
 		const s_string& name,
 		construct_fn_t on_create = nullptr,
 		destruct_fn_t on_destroy = nullptr,
@@ -212,7 +186,7 @@ public:
 	s_pooled_string name;
 	uint32_t lookup_hash_by_name = 0;
 public:
-	s_vector<entity_t> entities;
+	s_node_list_t<entity_t> entities;
 };
 
 class entity_manager
@@ -242,7 +216,7 @@ public:
 	void destroy();
 
 public:
-	s_vector<entity_layer_t> layers;
+	s_node_list_t<entity_layer_t> layers;
 };
 
 extern entity_manager g_entity_mgr;

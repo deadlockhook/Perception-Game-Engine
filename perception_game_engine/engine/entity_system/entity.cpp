@@ -1,6 +1,7 @@
 #include "entity_system.h"
 #include "../threading/thread_storage.h"
 #include "../../crt/s_string_pool.h"
+#include "../../crt/s_node_list.h"
 
 void entity_t::destroy()
 {
@@ -11,16 +12,19 @@ void entity_t::destroy()
 	__try {
 		ts->current_entity = this;
 
-		for (auto& c : components) 
-			c.destroy();
+		for (auto* n = components.begin(); n != components.end(); n = n->next)
+			n->value.destroy();
 
 		if (on_destroy)
 			on_destroy(_class);
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER) {
-		on_fail("Entity destructor failed! %s ", name.c_str()); //add more proper logging
+		on_fail("Entity destructor failed! %s", name.c_str()); 
 	}
+
+	components.clear(); 
 }
+
 
 bool entity_t::construct(entity_layer_t* o,
 	const s_string& n,
@@ -72,24 +76,27 @@ bool entity_t::construct(entity_layer_t* o,
 }
 
 void entity_t::attach_to(entity_t* e) {
+
 	if (e && !parent) {
 		parent = e;
 		e->children.push_back(this);
 	}
+
 }
 
 void entity_t::detach() {
 	if (parent) {
 		auto& siblings = parent->children;
-		for (size_t i = 0; i < siblings.count(); ++i) {
-			if (siblings[i] == this) {
-				siblings.erase_at(i);
+		for (auto* n = siblings.begin(); n != siblings.end(); n = n->next) {
+			if (n->value == this) {
+				siblings.remove_node(n);
 				break;
 			}
 		}
 		parent = nullptr;
 	}
 }
+
 
 void entity_t::reparent(entity_t* new_parent) {
 
@@ -108,7 +115,7 @@ entity_t* entity_t::get_root() {
 }
 
 void entity_t::for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata) {
-	for (entity_t* child : children) {
+	FOR_EACH_NODE(children, child) {
 		fn(storage, child, userdata);
 		child->for_each_child_recursive(storage, fn, userdata);
 	}

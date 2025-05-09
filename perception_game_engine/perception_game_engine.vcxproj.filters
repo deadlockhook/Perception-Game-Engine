@@ -36,10 +36,16 @@
     <ClCompile Include="exception\fail.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="engine\entity_system\entity_layer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="engine\entity_system\entity_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="engine\entity_system\master_entity_manager.cpp">
+    <ClCompile Include="engine\threading\thread_storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity_system\entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -80,13 +86,13 @@
     <ClInclude Include="exception\fail.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="engine\entity_system\entity_manager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\entity_system\entity_header.h">
+    <ClInclude Include="engine\entity_system\entity_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="serialize\fnva_hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\threading\thread_storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

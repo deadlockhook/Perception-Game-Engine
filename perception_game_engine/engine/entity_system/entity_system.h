@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+
 #include "../../crt/s_string.h"
 #include "../../crt/s_map.h"
 #include "../../serialize/fnva_hash.h"
@@ -14,8 +14,9 @@ typedef class render_context_t;
 typedef class ui_context_t;
 typedef class input_context_t;
 typedef class entity_t;
+typedef class entity_layer_t;
 typedef class component_t;
-typedef void(*entity_iter_fn_t)(entity_t* child, void* userdata);
+typedef void(*entity_iter_fn_t)(struct thread_storage_t* storage, entity_t* child, void* userdata);
 
 using construct_fn_t = class_t * (*)(user_data_t*);
 using destruct_fn_t = class_t(*)(class_t*);
@@ -74,18 +75,10 @@ public:
 	entity_t() = default;
 	~entity_t() = default;
 
-	void destroy()
-	{
-		__try {
-			if (on_destroy)
-				on_destroy(_class);
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER) {
-			on_fail("Entity destructor failed! %s ", name.c_str()); //add more proper logging
-		}
-	}
+	void destroy();
 
 	bool construct(
+		entity_layer_t* owner,
 		uint32_t l,
 		const s_string& n,
 		construct_fn_t _on_create,
@@ -100,79 +93,13 @@ public:
 		on_debug_draw_fn_t _on_debug_draw,
 		on_ui_inspector_fn_t _on_ui_inspector,
 		user_data_t* data
-	) {
-		layer = l;
-		name = n;
-		lookup_hash_by_name = fnv1a32(n.c_str());
-		user_data = data;
+	);
 
-		on_create = _on_create;
-		on_destroy = _on_destroy;
-		on_input_receive = _on_input_receive;
-		on_physics_update = _on_physics_update;
-		on_frame = _on_frame;
-		on_render = _on_render;
-		on_render_ui = _on_render_ui;
-		on_serialize = _on_serialize;
-		on_deserialize = _on_deserialize;
-		on_debug_draw = _on_debug_draw;
-		on_ui_inspector = _on_ui_inspector;
-
-		__try {
-			if (on_create)
-				_class = on_create(user_data);
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER) {
-			on_fail("Entity constructor failed: %s", name.c_str());
-			_class = nullptr;
-			return false;
-		}
-
-		return _class != nullptr;
-	}
-
-	void attach_to(entity_t* e) {
-		if (e && !parent) {
-			parent = e;
-			e->children.push_back(this);
-		}
-	}
-
-	void detach() {
-		if (parent) {
-			auto& siblings = parent->children;
-			for (size_t i = 0; i < siblings.count(); ++i) {
-				if (siblings[i] == this) {
-					siblings.erase_at(i);
-					break;
-				}
-			}
-			parent = nullptr;
-		}
-	}
-
-	void reparent(entity_t* new_parent) {
-
-		if (new_parent == this || parent == new_parent)
-			return;
-
-		detach();
-		attach_to(new_parent);
-	}
-
-	entity_t* get_root() {
-		entity_t* current = this;
-		while (current->parent)
-			current = current->parent;
-		return current;
-	}
-
-	void for_each_child_recursive(entity_iter_fn_t fn, void* userdata) {
-		for (entity_t* child : children) {
-			fn(child, userdata);
-			child->for_each_child_recursive(fn, userdata);
-		}
-	}
+	void attach_to(entity_t* e);
+	void detach();
+	void reparent(entity_t* new_parent);
+	entity_t* get_root();
+	void for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata);
 
 public:
 	uint32_t layer;
@@ -182,16 +109,17 @@ public:
 	user_data_t* user_data = nullptr; //passed onto callbacks
 public:
 	entity_t* parent = nullptr; //parent entity
+	entity_layer_t* owner_layer = nullptr; //layer pointer
 	s_vector<entity_t*> children;
 };
 
-class entity_manager_t
+class entity_layer_t
 {
 public:
-	entity_manager_t() = default;
-	~entity_manager_t() = default;
+	entity_layer_t() = default;
+	~entity_layer_t() = default;
 
-	void init_manager(const s_string& n);
+	void init_layer(const s_string& n);
 
 	void create_entity(
 		uint32_t type,
@@ -222,18 +150,18 @@ public:
 	s_map<uint32_t, s_vector<entity_t>> entities;
 };
 
-class master_entity_manager
+class entity_manager
 {
 public:
-	master_entity_manager() = default;
-	~master_entity_manager() = default;
+	entity_manager() = default;
+	~entity_manager() = default;
 
 	uint32_t create_layer(const s_string& name);
 
 	void destroy_layer(uint32_t id);
 
-	entity_manager_t* get_layer(uint32_t id);
-	entity_manager_t* get_layer_by_name(const s_string& name);
+	entity_layer_t* get_layer(uint32_t id);
+	entity_layer_t* get_layer_by_name(const s_string& name);
 
 	bool has_layer(const s_string& name);
 
@@ -249,7 +177,7 @@ public:
 	void destroy();
 
 public:
-	s_vector<entity_manager_t> layers;
+	s_vector<entity_layer_t> layers;
 };
 
-extern master_entity_manager g_master_entity_manager;
+extern entity_manager g_entity_mgr;

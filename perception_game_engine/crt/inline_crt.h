@@ -1,5 +1,7 @@
 #pragma once
 #include <vcruntime_string.h>
+#include <Windows.h>
+#include <minwindef.h>
 __forceinline int to_lower(char c) {
     if (c >= 'A' && c <= 'Z') {
         return c + ('a' - 'A');
@@ -176,10 +178,13 @@ struct remove_reference {
     using _Const_thru_ref_type = const t;
 };
 
+#include <type_traits>
+
 template <class t>
 _NODISCARD constexpr std::remove_reference_t<t>&& _move(t&& _Arg) noexcept {
     return static_cast<std::remove_reference_t<t>&&>(_Arg);
 }
+
 
 inline void reverse_string(char* str, int length) {
     int start = 0;

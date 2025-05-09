@@ -1,113 +1,326 @@
-#include "entity_manager.h"
+#include "entity_system.h"
+#include "../threading/thread_storage.h"
 
-void entity_manager_t::init_manager(const s_string& n)
+
+entity_manager g_entity_mgr = entity_manager();
+
+uint32_t entity_manager::create_layer(const s_string& name)
 {
-	name = n;
-	lookup_hash_by_name = fnv1a32(n.c_str());
+	auto manager = &layers.push_back(entity_layer_t());
+
+	if (!manager)
+		return -1;
+
+	manager->init_layer(name);
+	return layers.count() - 1;
 }
 
-void entity_manager_t::create_entity(
-	uint32_t type,
-	const s_string& name,
-	construct_fn_t on_create,
-	destruct_fn_t on_destroy,
-	on_input_receive_fn_t on_input_receive,
-	on_physics_update_fn_t on_physics_update,
-	on_frame_fn_t on_frame,
-	on_render_fn_t on_render,
-	on_render_ui_fn_t on_render_ui,
-	on_serialize_fn_t on_serialize,
-	on_deserialize_fn_t on_deserialize,
-	on_debug_draw_fn_t on_debug_draw,
-	on_ui_inspector_fn_t on_ui_inspector,
-	user_data_t* data 
-)
+void entity_manager::destroy_layer(uint32_t id)
 {
-	entity_t entity;
-	
-	if (entity.construct(type, name, on_create, on_destroy, on_input_receive, on_physics_update, on_frame, on_render, on_render_ui, on_serialize, on_deserialize, on_debug_draw, on_ui_inspector, data)) {
-		auto& entity_list = entities[type];
-		entity_list.push_back(entity);
+	if (id >= layers.count())
 		return;
-	}
 
-	on_fail("Failed to create entity: %s", name.c_str());
+	layers[id].destroy();
+	layers.erase_at(id);
 }
 
-entity_t* entity_manager_t::get_entity_by_class(class_t* class_ptr)
+entity_layer_t* entity_manager::get_layer(uint32_t id)
 {
-	for (auto& entity : entities) {
-		for (auto& e : entity.value) {
-			if (e._class == class_ptr) {
-				return &e;
-			}
-		}
-	}
+	if (id >= layers.count()) return nullptr;
+	return &layers[id];
+}
+
+entity_layer_t* entity_manager::get_layer_by_name(const s_string& name) {
+	uint32_t hash = fnv1a32(name.c_str());
+	for (auto& layer : layers)
+		if (layer.lookup_hash_by_name == hash)
+			return &layer;
 	return nullptr;
 }
 
-entity_t* entity_manager_t::get_entity_by_name(const s_string& name)
-{
-	uint32_t hash = fnv1a32(name.c_str());
-	for (auto& entity : entities) {
-		for (auto& e : entity.value) {
-			if (e.lookup_hash_by_name == hash) {
-				return &e;
+bool entity_manager::has_layer(const s_string& name) {
+	return get_layer_by_name(name) != nullptr;
+}
+
+void entity_manager::on_frame() {
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+
+				if (e.parent)
+					continue; 
+
+				if (e.on_frame && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_frame(e._class); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_frame failed: %s", e.name.c_str());
+					}
+				}
+
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void*) {
+					if (child->on_frame && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_frame(child->_class); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_frame failed: %s", child->name.c_str());
+						}
+					}
+					}, nullptr);
 			}
 		}
 	}
-	return nullptr;
 }
 
-s_vector<entity_t*> entity_manager_t::get_entities_by_name(const s_string& name)
-{
-	uint32_t hash = fnv1a32(name.c_str());
+void entity_manager::on_physics_update() {
+	auto ts = get_current_thread_storage();
 
-	s_vector<entity_t*> result;
-
-	for (auto& entity : entities) {
-		for (auto& e : entity.value) {
-			if (e.lookup_hash_by_name == hash) {
-				result.push_back(&e);
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_physics_update && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_physics_update(e._class); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_physics_update failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void*) {
+					if (child->on_physics_update && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_physics_update(child->_class); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_physics_update failed: %s", child->name.c_str());
+						}
+					}
+					}, nullptr);
 			}
 		}
 	}
-
-	return result;
 }
 
-s_vector<entity_t*> entity_manager_t::get_entities_of_type(uint32_t type)
-{
-	s_vector<entity_t*> result;
-	auto it = entities.find(type);
-	if (!it) return result;
+void entity_manager::on_input_receive(input_context_t* ctx) {
+	auto ts = get_current_thread_storage();
 
-	for (int i = 0; i < it->count(); i++)
-		result.push_back(&it->at(i));
-
-	return result;
-}
-
-bool entity_manager_t::remove_entity_by_class(class_t* class_ptr)
-{
-	for (auto& pair : entities) {
-		auto& vec = pair.value;
-		for (size_t i = 0; i < vec.count(); ++i) {
-			if (vec[i]._class == class_ptr) {
-				vec[i].destroy();
-				vec.erase_at(i);
-				return true;
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_input_receive && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_input_receive(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_input_receive failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_input_receive && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_input_receive(child->_class, (input_context_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_input_receive failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
 			}
 		}
 	}
-	return false;
 }
 
-void entity_manager_t::destroy()
+void entity_manager::on_render(render_context_t* ctx)
 {
-	for (auto& entity : entities) {
-		for (auto& e : entity.value) {
-			e.destroy();
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_render && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_render(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_render failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_render && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_render(child->_class, (render_context_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("on_render failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
+			}
 		}
 	}
+}
+
+void entity_manager::on_render_ui(render_context_t* ctx)
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_render_ui && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_render_ui(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_render_ui failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_render_ui && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_render_ui(child->_class, (render_context_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("on_render_ui failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
+			}
+		}
+	}
+}
+
+
+void entity_manager::on_debug_draw(render_context_t* ctx)
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_debug_draw && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_debug_draw(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_debug_draw failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_debug_draw && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_debug_draw(child->_class, (render_context_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("on_debug_draw failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
+			}
+		}
+	}
+}
+
+void entity_manager::on_ui_inspector(render_context_t* ctx)
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_ui_inspector && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_ui_inspector(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_ui_inspector failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_ui_inspector && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_ui_inspector(child->_class, (render_context_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_ui_inspector failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
+			}
+		}
+	}
+}
+
+void entity_manager::on_serialize(serializer_t* ctx)
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_serialize && e._class) {
+					ts->current_entity = &e;
+					__try { e.on_serialize(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_serialize failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts,[](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_serialize && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_serialize(child->_class, (serializer_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_serialize failed: %s", child->name.c_str());
+						}
+					}
+				}, ctx);
+			}
+		}
+	}
+}
+
+void entity_manager::on_deserialize(deserializer_t* ctx)
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		for (auto& [_, vec] : layer.entities) {
+			for (auto& e : vec) {
+				if (e.parent) continue;
+				if (e.on_deserialize && e._class) {
+					__try { e.on_deserialize(e._class, ctx); }
+					__except (EXCEPTION_EXECUTE_HANDLER) {
+						on_fail("on_deserialize failed: %s", e.name.c_str());
+					}
+				}
+				e.for_each_child_recursive(ts, [](thread_storage_t* storage, entity_t* child, void* ctx_ptr) {
+					if (child->on_deserialize && child->_class) {
+						storage->current_entity = child;
+						__try { child->on_deserialize(child->_class, (deserializer_t*)ctx_ptr); }
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							on_fail("child on_deserialize failed: %s", child->name.c_str());
+						}
+					}
+					}, ctx);
+			}
+		}
+	}
+}
+
+void entity_manager::destroy()
+{
+	auto ts = get_current_thread_storage();
+
+	for (auto& layer : layers) {
+		ts->current_layer = &layer;
+		layer.destroy();
+	}
+
+	layers.clear();
 }

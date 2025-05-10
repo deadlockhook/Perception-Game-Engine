@@ -26,6 +26,9 @@ struct vector3 {
 
     bool operator==(const vector3& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
     bool operator!=(const vector3& rhs) const { return !(*this == rhs); }
+    double& operator[](int i) { return *((&x) + i); }
+
+    const double& operator[](int i) const { return *((&x) + i); }
 
     double length_squared() const { return x * x + y * y + z * z; }
     double length() const { return std::sqrt(length_squared()); }
@@ -46,6 +49,12 @@ struct vector3 {
         if (len != 0.0) {
             x /= len; y /= len; z /= len;
         }
+    }
+
+    vector3 normalized()
+    {
+		double len = length();
+		return (len != 0.0) ? (*this / len) : vector3::zero();
     }
 
     double dot(const vector3& rhs) const {

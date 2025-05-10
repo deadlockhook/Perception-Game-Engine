@@ -63,6 +63,12 @@
     <ClCompile Include="math\quat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="math\ray.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\aabb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -141,6 +147,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math\vector4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\aabb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\ray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

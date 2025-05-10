@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include "vector3.h"
+#include "vector4.h"
 #include "quat.h"
 
 struct matrix4x4 {
@@ -15,6 +16,12 @@ struct matrix4x4 {
 
     float& operator()(int row, int col) { return m[row][col]; }
     const float& operator()(int row, int col) const { return m[row][col]; }
+    
+    float* operator[](int row) { return m[row]; }
+    const float* operator[](int row) const { return m[row]; }
+ 
+    inline const float* data() const { return &m[0][0]; }
+    inline float* data() { return &m[0][0]; }
 
     matrix4x4 operator*(const matrix4x4& rhs) const;
     matrix4x4& operator*=(const matrix4x4& rhs);
@@ -28,6 +35,9 @@ struct matrix4x4 {
 
     bool equals(const matrix4x4& other, float epsilon = 1e-5f) const;
     void to_float_array(float out[16]) const;
+    matrix4x4 inverse() const;
+    matrix4x4 inverse_affine() const;
+    vector4 transform_vec4(const vector4& v) const;
 
     static matrix4x4 translate(const vector3& v);
     static matrix4x4 scale(const vector3& v);

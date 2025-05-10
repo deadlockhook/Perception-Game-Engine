@@ -33,11 +33,13 @@ matrix4x4& matrix4x4::operator*=(const matrix4x4& rhs) {
 
 matrix4x4 matrix4x4::translate(const vector3& v) {
     matrix4x4 result = identity();
-    result.m[3][0] = static_cast<float>(v.x);
-    result.m[3][1] = static_cast<float>(v.y);
-    result.m[3][2] = static_cast<float>(v.z);
+    result.m[0][3] = (float)v.x;
+    result.m[1][3] = (float)v.y;
+    result.m[2][3] = (float)v.z;
     return result;
 }
+
+
 
 matrix4x4 matrix4x4::scale(const vector3& v) {
     matrix4x4 result = identity();
@@ -70,15 +72,15 @@ matrix4x4 matrix4x4::rotate(const quat& q) {
     return result;
 }
 matrix4x4 matrix4x4::trs(const vector3& t, const quat& r, const vector3& s) {
-    return scale(s) * rotate(r) * translate(t);
+    return translate(t) * rotate(r) * scale(s);
 }
 
 
 vector3 matrix4x4::transform_point(const vector3& v) const {
-    float x = v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0];
-    float y = v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + m[3][1];
-    float z = v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + m[3][2];
-    float w = v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + m[3][3];
+    float x = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3];
+    float y = m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3];
+    float z = m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3];
+    float w = m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3];
 
     if (w != 0.0f) {
         x /= w;
@@ -100,6 +102,16 @@ vector3 matrix4x4::transform_direction(const vector3& v) const {
 
     return { x, y, z };
 }
+
+vector4 matrix4x4::transform_vec4(const vector4& v) const {
+    return vector4(
+        m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3] * v.w,
+        m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3] * v.w,
+        m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w,
+        m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w
+    );
+}
+
 
 matrix4x4 matrix4x4::transposed() const {
     matrix4x4 r;
@@ -324,6 +336,114 @@ matrix4x4 matrix4x4::inverted() const {
     return inv;
 }
 
+
+matrix4x4 matrix4x4::inverse() const {
+    matrix4x4 result;
+    const float* mat = &this->m[0][0];
+    float* inv = &result.m[0][0];
+
+    inv[0] = mat[5] * mat[10] * mat[15] - mat[5] * mat[11] * mat[14] - mat[9] * mat[6] * mat[15] +
+        mat[9] * mat[7] * mat[14] + mat[13] * mat[6] * mat[11] - mat[13] * mat[7] * mat[10];
+
+    inv[4] = -mat[4] * mat[10] * mat[15] + mat[4] * mat[11] * mat[14] + mat[8] * mat[6] * mat[15] -
+        mat[8] * mat[7] * mat[14] - mat[12] * mat[6] * mat[11] + mat[12] * mat[7] * mat[10];
+
+    inv[8] = mat[4] * mat[9] * mat[15] - mat[4] * mat[11] * mat[13] - mat[8] * mat[5] * mat[15] +
+        mat[8] * mat[7] * mat[13] + mat[12] * mat[5] * mat[11] - mat[12] * mat[7] * mat[9];
+
+    inv[12] = -mat[4] * mat[9] * mat[14] + mat[4] * mat[10] * mat[13] + mat[8] * mat[5] * mat[14] -
+        mat[8] * mat[6] * mat[13] - mat[12] * mat[5] * mat[10] + mat[12] * mat[6] * mat[9];
+
+    inv[1] = -mat[1] * mat[10] * mat[15] + mat[1] * mat[11] * mat[14] + mat[9] * mat[2] * mat[15] -
+        mat[9] * mat[3] * mat[14] - mat[13] * mat[2] * mat[11] + mat[13] * mat[3] * mat[10];
+
+    inv[5] = mat[0] * mat[10] * mat[15] - mat[0] * mat[11] * mat[14] - mat[8] * mat[2] * mat[15] +
+        mat[8] * mat[3] * mat[14] + mat[12] * mat[2] * mat[11] - mat[12] * mat[3] * mat[10];
+
+    inv[9] = -mat[0] * mat[9] * mat[15] + mat[0] * mat[11] * mat[13] + mat[8] * mat[1] * mat[15] -
+        mat[8] * mat[3] * mat[13] - mat[12] * mat[1] * mat[11] + mat[12] * mat[3] * mat[9];
+
+    inv[13] = mat[0] * mat[9] * mat[14] - mat[0] * mat[10] * mat[13] - mat[8] * mat[1] * mat[14] +
+        mat[8] * mat[2] * mat[13] + mat[12] * mat[1] * mat[10] - mat[12] * mat[2] * mat[9];
+
+    inv[2] = mat[1] * mat[6] * mat[15] - mat[1] * mat[7] * mat[14] - mat[5] * mat[2] * mat[15] +
+        mat[5] * mat[3] * mat[14] + mat[13] * mat[2] * mat[7] - mat[13] * mat[3] * mat[6];
+
+    inv[6] = -mat[0] * mat[6] * mat[15] + mat[0] * mat[7] * mat[14] + mat[4] * mat[2] * mat[15] -
+        mat[4] * mat[3] * mat[14] - mat[12] * mat[2] * mat[7] + mat[12] * mat[3] * mat[6];
+
+    inv[10] = mat[0] * mat[5] * mat[15] - mat[0] * mat[7] * mat[13] - mat[4] * mat[1] * mat[15] +
+        mat[4] * mat[3] * mat[13] + mat[12] * mat[1] * mat[7] - mat[12] * mat[3] * mat[5];
+
+    inv[14] = -mat[0] * mat[5] * mat[14] + mat[0] * mat[6] * mat[13] + mat[4] * mat[1] * mat[14] -
+        mat[4] * mat[2] * mat[13] - mat[12] * mat[1] * mat[6] + mat[12] * mat[2] * mat[5];
+
+    inv[3] = -mat[1] * mat[6] * mat[11] + mat[1] * mat[7] * mat[10] + mat[5] * mat[2] * mat[11] -
+        mat[5] * mat[3] * mat[10] - mat[9] * mat[2] * mat[7] + mat[9] * mat[3] * mat[6];
+
+    inv[7] = mat[0] * mat[6] * mat[11] - mat[0] * mat[7] * mat[10] - mat[4] * mat[2] * mat[11] +
+        mat[4] * mat[3] * mat[10] + mat[8] * mat[2] * mat[7] - mat[8] * mat[3] * mat[6];
+
+    inv[11] = -mat[0] * mat[5] * mat[11] + mat[0] * mat[7] * mat[9] + mat[4] * mat[1] * mat[11] -
+        mat[4] * mat[3] * mat[9] - mat[8] * mat[1] * mat[7] + mat[8] * mat[3] * mat[5];
+
+    inv[15] = mat[0] * mat[5] * mat[10] - mat[0] * mat[6] * mat[9] - mat[4] * mat[1] * mat[10] +
+        mat[4] * mat[2] * mat[9] + mat[8] * mat[1] * mat[6] - mat[8] * mat[2] * mat[5];
+
+    double det = mat[0] * inv[0] + mat[1] * inv[4] + mat[2] * inv[8] + mat[3] * inv[12];
+    if (std::abs(det) < 1e-8)
+        return matrix4x4::identity(); 
+
+    double inv_det = 1.0 / det;
+    for (int i = 0; i < 16; ++i)
+        inv[i] *= inv_det;
+
+    return result;
+}
+
+matrix4x4 matrix4x4::inverse_affine() const {
+    matrix4x4 result;
+
+
+    float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2];
+    float a10 = m[1][0], a11 = m[1][1], a12 = m[1][2];
+    float a20 = m[2][0], a21 = m[2][1], a22 = m[2][2];
+
+    float det =
+        a00 * (a11 * a22 - a12 * a21) -
+        a01 * (a10 * a22 - a12 * a20) +
+        a02 * (a10 * a21 - a11 * a20);
+
+    if (std::abs(det) < 1e-8f)
+        return matrix4x4::identity();
+
+    float inv_det = 1.0f / det;
+
+    result.m[0][0] = (a11 * a22 - a12 * a21) * inv_det;
+    result.m[0][1] = -(a01 * a22 - a02 * a21) * inv_det;
+    result.m[0][2] = (a01 * a12 - a02 * a11) * inv_det;
+
+    result.m[1][0] = -(a10 * a22 - a12 * a20) * inv_det;
+    result.m[1][1] = (a00 * a22 - a02 * a20) * inv_det;
+    result.m[1][2] = -(a00 * a12 - a02 * a10) * inv_det;
+
+    result.m[2][0] = (a10 * a21 - a11 * a20) * inv_det;
+    result.m[2][1] = -(a00 * a21 - a01 * a20) * inv_det;
+    result.m[2][2] = (a00 * a11 - a01 * a10) * inv_det;
+
+    float tx = m[0][3], ty = m[1][3], tz = m[2][3];
+    result.m[0][3] = -(result.m[0][0] * tx + result.m[0][1] * ty + result.m[0][2] * tz);
+    result.m[1][3] = -(result.m[1][0] * tx + result.m[1][1] * ty + result.m[1][2] * tz);
+    result.m[2][3] = -(result.m[2][0] * tx + result.m[2][1] * ty + result.m[2][2] * tz);
+
+    result.m[3][0] = result.m[3][1] = result.m[3][2] = 0.0f;
+    result.m[3][3] = 1.0f;
+
+    return result;
+}
+
+
+
 void matrix4x4::print() const {
     printf("[matrix4x4]\n");
     for (int row = 0; row < 4; ++row) {
@@ -334,3 +454,4 @@ void matrix4x4::print() const {
         printf("]\n");
     }
 }
+

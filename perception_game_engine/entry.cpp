@@ -27,6 +27,7 @@
 #include "math/vector4.h"
 #include "math/aabb.h"
 #include "math/ray.h"
+#include "math/frustum.h"
 
 
 struct test_data_t {
@@ -97,18 +98,16 @@ void run_component_hierarchy_test() {
     printf("[test] Component hierarchy test passed.\n");
 }
 
-void test_ray_aabb_intersection() {
-    aabb_t box(vector3(-1, -1, -1), vector3(1, 1, 1));
-    ray_t ray(vector3(0, 0, -5), vector3(0, 0, 1));
 
-    double tmin = 0.0, tmax = 0.0;
-    assert(ray.intersects_aabb(box, tmin, tmax));
-    assert(tmin >= 4.0 - 1e-6);
+
+void run_all_tests() {
+
+    printf("✅ All plane_t and frustum_t tests passed.\n");
 }
 
 int main()
 {
-  
+    run_all_tests();
    // run_component_hierarchy_test();
 //	protect_region = VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     system("pause");

@@ -69,6 +69,12 @@
     <ClCompile Include="math\aabb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="math\plane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\frustum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -153,6 +159,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math\ray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\plane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\frustum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

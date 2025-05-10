@@ -5,17 +5,12 @@ quat quat::identity() {
     return quat(0.0, 0.0, 0.0, 1.0);
 }
 
-quat quat::from_axis_angle(const vector3& axis, double radians) {
-    vector3 norm_axis = axis.normalized();
-    double half = radians * 0.5;
+quat quat::from_axis_angle(const vector3& axis, double angle) {
+    double half = angle * 0.5;
     double s = std::sin(half);
-    return quat(
-        norm_axis.x * s,
-        norm_axis.y * s,
-        norm_axis.z * s,
-        std::cos(half)
-    );
+    return quat(std::cos(half), axis.x * s, axis.y * s, axis.z * s);
 }
+
 
 quat quat::from_euler(double pitch, double yaw, double roll) {
     double cy = std::cos(yaw * 0.5);

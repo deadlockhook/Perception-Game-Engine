@@ -148,7 +148,9 @@
     <ClCompile Include="exception\fail.cpp" />
     <ClCompile Include="exception\exception_handler.cpp" />
     <ClCompile Include="math\aabb.cpp" />
+    <ClCompile Include="math\frustum.cpp" />
     <ClCompile Include="math\matrix4x4.cpp" />
+    <ClCompile Include="math\plane.cpp" />
     <ClCompile Include="math\quat.cpp" />
     <ClCompile Include="math\ray.cpp" />
     <ClCompile Include="memory\addr.cpp" />
@@ -170,9 +172,11 @@
     <ClInclude Include="definitions.h" />
     <ClInclude Include="exception\exception_handler.h" />
     <ClInclude Include="math\aabb.h" />
+    <ClInclude Include="math\frustum.h" />
     <ClInclude Include="math\math_defs.h" />
     <ClInclude Include="math\matrix4x4.h" />
     <ClInclude Include="math\pixel_vector2.h" />
+    <ClInclude Include="math\plane.h" />
     <ClInclude Include="math\quat.h" />
     <ClInclude Include="math\ray.h" />
     <ClInclude Include="math\vector2.h" />

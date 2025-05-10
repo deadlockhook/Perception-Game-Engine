@@ -142,10 +142,13 @@
     <ClCompile Include="engine\entity_system\entity.cpp" />
     <ClCompile Include="engine\entity_system\entity_layer.cpp" />
     <ClCompile Include="engine\entity_system\entity_manager.cpp" />
+    <ClCompile Include="engine\hwnd\window_manager.cpp" />
     <ClCompile Include="engine\threading\thread_storage.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="exception\fail.cpp" />
     <ClCompile Include="exception\exception_handler.cpp" />
+    <ClCompile Include="math\matrix4x4.cpp" />
+    <ClCompile Include="math\quat.cpp" />
     <ClCompile Include="memory\addr.cpp" />
     <ClCompile Include="memory\mem.cpp" />
   </ItemGroup>
@@ -157,11 +160,19 @@
     <ClInclude Include="crt\s_node_list.h" />
     <ClInclude Include="crt\s_string_pool.h" />
     <ClInclude Include="engine\entity_system\entity_system.h" />
+    <ClInclude Include="engine\hwnd\window_manager.h" />
+    <ClInclude Include="engine\render\render_device.h" />
     <ClInclude Include="engine\threading\thread_storage.h" />
     <ClInclude Include="exception\fail.h" />
     <ClInclude Include="crt\s_vector.h" />
     <ClInclude Include="definitions.h" />
     <ClInclude Include="exception\exception_handler.h" />
+    <ClInclude Include="math\math_defs.h" />
+    <ClInclude Include="math\matrix4x4.h" />
+    <ClInclude Include="math\pixel_vector2.h" />
+    <ClInclude Include="math\quat.h" />
+    <ClInclude Include="math\vector2.h" />
+    <ClInclude Include="math\vector3.h" />
     <ClInclude Include="memory\addr.h" />
     <ClInclude Include="memory\mem.h" />
     <ClInclude Include="crt\safe_crt.h" />

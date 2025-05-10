@@ -140,5 +140,8 @@
     <ClInclude Include="math\math_defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="math\vector4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

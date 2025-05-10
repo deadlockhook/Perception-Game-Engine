@@ -1,5 +1,6 @@
 #include "matrix4x4.h"
 #include <stdio.h>
+#include "vector4.h"
 
 matrix4x4 matrix4x4::identity() {
     matrix4x4 result;
@@ -87,10 +88,6 @@ vector3 matrix4x4::transform_point(const vector3& v) const {
 
     return { x, y, z };
 }
-
-
-
-
 
 vector3 matrix4x4::transform_direction(const vector3& v) const {
     float x_ = static_cast<float>(v.x);

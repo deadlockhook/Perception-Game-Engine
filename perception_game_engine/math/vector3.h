@@ -29,6 +29,12 @@ struct vector3 {
 
     double length_squared() const { return x * x + y * y + z * z; }
     double length() const { return std::sqrt(length_squared()); }
+  
+    bool equals(const vector3& rhs, double epsilon = 1e-6) const {
+        return std::abs(x - rhs.x) < epsilon &&
+            std::abs(y - rhs.y) < epsilon &&
+            std::abs(z - rhs.z) < epsilon;
+    }
 
     vector3 normalized() const {
         double len = length();

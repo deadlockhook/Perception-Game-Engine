@@ -24,6 +24,7 @@
 #include "math/pixel_vector2.h"
 #include "math/vector2.h"
 #include "math/math_defs.h"
+#include "math/vector4.h"
 
 
 struct test_data_t {
@@ -96,6 +97,7 @@ void run_component_hierarchy_test() {
 
 int main()
 {
+
    // run_component_hierarchy_test();
 //	protect_region = VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     system("pause");

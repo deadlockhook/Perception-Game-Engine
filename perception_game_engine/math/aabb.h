@@ -11,6 +11,16 @@ struct aabb_t {
 
     aabb_t() : min(), max() {}
     aabb_t(const vector3& min, const vector3& max) : min(min), max(max) {}
+   
+    bool contains(const vector3& point) const {
+        return point.x >= min.x && point.x <= max.x &&
+            point.y >= min.y && point.y <= max.y &&
+            point.z >= min.z && point.z <= max.z;
+    }
+
+    bool contains_point(const vector3& point) const {
+        return contains(point);
+    }
 
     static aabb_t from_center_extent(const vector3& center, const vector3& extent) {
         return aabb_t(center - extent, center + extent);
@@ -43,12 +53,6 @@ struct aabb_t {
 
     vector3 size() const {
         return max - min;
-    }
-
-    bool contains(const vector3& point) const {
-        return point.x >= min.x && point.x <= max.x &&
-            point.y >= min.y && point.y <= max.y &&
-            point.z >= min.z && point.z <= max.z;
     }
 
     bool intersects(const aabb_t& other) const {

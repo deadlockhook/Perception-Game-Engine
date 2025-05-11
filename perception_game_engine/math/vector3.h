@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include "vector2.h"
+#include <algorithm>
 
 struct vector3 {
     double x = 0.0;
@@ -79,6 +80,22 @@ struct vector3 {
 
     double distance_squared_to(const vector3& other) const {
         return (*this - other).length_squared();
+    }
+
+    static vector3 min(const vector3& a, const vector3& b) {
+        return vector3(
+            std::min(a.x, b.x),
+            std::min(a.y, b.y),
+            std::min(a.z, b.z)
+        );
+    }
+
+    static vector3 max(const vector3& a, const vector3& b) {
+        return vector3(
+            std::max(a.x, b.x),
+            std::max(a.y, b.y),
+            std::max(a.z, b.z)
+        );
     }
 
     double angle_between(const vector3& other) const {

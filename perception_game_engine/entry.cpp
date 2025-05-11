@@ -28,86 +28,101 @@
 #include "math/aabb.h"
 #include "math/ray.h"
 #include "math/frustum.h"
+#include "math/obb.h"
+#include "math/geom/geom.h"
 
-
-struct test_data_t {
-    int created = 0;
-    int destroyed = 0;
-    int ticked = 0;
-};
-
-class_t* on_create_test(user_data_t*) {
-    auto* d = new test_data_t();
-    d->created = 1;
-    return reinterpret_cast<class_t*>(d);
+bool approx(double a, double b, double epsilon = 1e-6) {
+    return std::abs(a - b) <= epsilon;
 }
 
-void on_destroy_test(class_t* ptr) {
-    auto* d = reinterpret_cast<test_data_t*>(ptr);
-    d->destroyed = 1;
-    delete d;
+bool approx_vec(const vector3& a, const vector3& b, double epsilon = 1e-6) {
+    return (a - b).length_squared() <= epsilon * epsilon;
 }
 
-void on_frame_test(class_t* ptr) {
-   // auto* d = reinterpret_cast<test_data_t*>(ptr);
-   // d->ticked++;
-    auto current_class = get_current_entity();
+void test_geometry() {
+    triangle_t tri(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
 
-	std::cout << "Current entity: " << (current_class ? current_class->name.c_str() : "") << std::endl;
+    assert(approx_vec(tri.normal(), vector3(0, 0, 1)));
+    assert(approx_vec(tri.centroid(), vector3(1.0 / 3.0, 1.0 / 3.0, 0)));
+    assert(approx(tri.area(), 0.5));
+    assert(approx(tri.perimeter(), 1 + std::sqrt(2) + 1));
+    assert(!tri.is_degenerate());
 }
 
-void on_frame_test_comp(class_t* ptr) {
-    // auto* d = reinterpret_cast<test_data_t*>(ptr);
-    // d->ticked++;
-    auto current_component = get_current_component();
+void test_barycentric_conversion() {
+    triangle_t tri(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
 
-    std::cout << "Current entity: " << (current_component ? current_component->name.c_str() : "") << std::endl;
+    double u, v, w;
+    vector3 point(0.25, 0.25, 0);
+    tri.barycentric_coords(point, u, v, w);
+    assert(approx(u + v + w, 1.0));
+    vector3 back = tri.from_barycentric(u, v, w);
+    assert(approx_vec(back, point));
 }
 
-void run_component_hierarchy_test() {
-    printf("[test] Running component hierarchy test...\n");
+void test_closest_point_and_distance() {
+    triangle_t tri(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
 
-    // Create layer
-    auto* layer = g_entity_mgr.create_layer("hierarchy_layer");
+    vector3 p(0.5, 0.5, 1);
+    vector3 closest = tri.closest_point(p);
+    assert(approx_vec(closest, vector3(0.5, 0.5, 0)));
 
-   auto* root = layer->create_entity("root", nullptr, nullptr, nullptr, nullptr, on_frame_test);
-   // root->add_component("root_component", on_create_test, on_destroy_test, nullptr, nullptr, on_frame_test);
-
-    // Create child entity with component
-    auto* child = layer->create_entity("child", nullptr, nullptr, nullptr, nullptr, on_frame_test);
-    child->add_component("child_component", on_create_test, on_destroy_test, nullptr, nullptr, on_frame_test_comp);
-
-    child->attach_to(root);
-    root->attach_to(child);
-    child->attach_to(root);
-
-    for (int i = 0; i < 1; ++i)
-        g_entity_mgr.on_frame();
-
-    // Validate
-   // auto* root_data = root->get_component_class<test_data_t>("root_component");
-   // auto* child_data = child->get_component_class<test_data_t>("child_component");
-
-   // assert(root_data && root_data->created == 1 && root_data->ticked == 50);
-   // assert(child_data && child_data->created == 1 && child_data->ticked == 50);
-
-    // Cleanup
-    g_entity_mgr.destroy();
-
-    //printf("[result] Root ticks: %d, Child ticks: %d\n", root_data->ticked, child_data->ticked);
-    printf("[test] Component hierarchy test passed.\n");
+    double dist = tri.distance_to_point(p);
+    assert(approx(dist, 1.0));
 }
 
+void test_ray_intersection() {
+    triangle_t tri(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
+    ray_t ray(vector3(0.25, 0.25, -1), vector3(0, 0, 1));
+    double t;
+    assert(tri.intersects_ray(ray, &t));
+    assert(t > 0);
 
-
-void run_all_tests() {
-
-    printf("✅ All plane_t and frustum_t tests passed.\n");
+    ray_t miss(vector3(2, 2, -1), vector3(0, 0, 1));
+    assert(!tri.intersects_ray(miss));
 }
 
-int main()
-{
-    run_all_tests();
+void test_accessors_and_flipping() {
+    triangle_t tri(vector3(1, 2, 3), vector3(4, 5, 6), vector3(7, 8, 9));
+
+    assert(approx_vec(tri.get_vertex(0), tri.a));
+    assert(approx_vec(tri.get_vertex(1), tri.b));
+    assert(approx_vec(tri.get_vertex(2), tri.c));
+
+    assert(approx_vec(tri.get_edge(0), tri.b - tri.a));
+    assert(approx_vec(tri.get_edge(1), tri.c - tri.b));
+    assert(approx_vec(tri.get_edge(2), tri.a - tri.c));
+
+    triangle_t flipped = tri.flipped();
+    assert(approx_vec(flipped.a, tri.a));
+    assert(approx_vec(flipped.b, tri.c));
+    assert(approx_vec(flipped.c, tri.b));
+}
+
+void test_facing_and_equality() {
+    triangle_t tri(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
+
+    assert(tri.is_front_facing(vector3(0, 0, 1)) == false);
+    assert(tri.is_front_facing(vector3(0, 0, -1)) == true);
+
+    triangle_t same = tri;
+    triangle_t slightly_diff(vector3(0.000001, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
+    assert(tri.equals(same));
+    assert(tri.equals(slightly_diff, 1e-4));
+    assert(!tri.equals(slightly_diff, 1e-8));
+}
+
+int main() {
+    test_geometry();
+    test_barycentric_conversion();
+    test_closest_point_and_distance();
+    test_ray_intersection();
+    test_accessors_and_flipping();
+    test_facing_and_equality();
+
+
+    std::cout << "tests complete\n";
+
    // run_component_hierarchy_test();
 //	protect_region = VirtualAlloc(nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     system("pause");

@@ -149,7 +149,11 @@
     <ClCompile Include="exception\exception_handler.cpp" />
     <ClCompile Include="math\aabb.cpp" />
     <ClCompile Include="math\frustum.cpp" />
+    <ClCompile Include="math\geom\shapes\capsule.cpp" />
+    <ClCompile Include="math\geom\shapes\sphere.cpp" />
+    <ClCompile Include="math\geom\shapes\triangle.cpp" />
     <ClCompile Include="math\matrix4x4.cpp" />
+    <ClCompile Include="math\obb.cpp" />
     <ClCompile Include="math\plane.cpp" />
     <ClCompile Include="math\quat.cpp" />
     <ClCompile Include="math\ray.cpp" />
@@ -173,8 +177,10 @@
     <ClInclude Include="exception\exception_handler.h" />
     <ClInclude Include="math\aabb.h" />
     <ClInclude Include="math\frustum.h" />
+    <ClInclude Include="math\geom\geom.h" />
     <ClInclude Include="math\math_defs.h" />
     <ClInclude Include="math\matrix4x4.h" />
+    <ClInclude Include="math\obb.h" />
     <ClInclude Include="math\pixel_vector2.h" />
     <ClInclude Include="math\plane.h" />
     <ClInclude Include="math\quat.h" />

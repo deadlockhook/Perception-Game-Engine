@@ -191,6 +191,17 @@ static void test_polyhedron_convexity_closure() {
 
     std::cout << "[polyhedron_t] is_closed() and is_convex() tests passed\n";
 }
+static void test_polyhedron_support_point() {
+    aabb_t box(vector3(-1, -1, -1), vector3(1, 1, 1));
+    polyhedron_t poly;
+    assert(poly.from_aabb(box));
+
+    vector3 dir = vector3(1, 0, 0);
+    vector3 support = poly.get_support_point(dir);
+    assert(support.equals(vector3(1, 1, 1), 1e-6) || support.equals(vector3(1, -1, -1), 1e-6)); // or any max-x
+
+    std::cout << "[polyhedron_t] get_support_point passed\n";
+}
 
 void run_polyhedron_box_tests() {
     test_polyhedron_from_aabb();
@@ -199,10 +210,31 @@ void run_polyhedron_box_tests() {
     test_polyhedron_convexity_closure();
 }
 
+static void test_polyhedron_shape_constructors() {
+    std::cout << "--- Testing polyhedron_t shape generators ---\n";
+
+    polyhedron_t p1, p2, p3;
+
+    segment_t s(vector3(-1, 0, 0), vector3(1, 0, 0));
+    p1.from_segment(s.start, s.end, 0.05, 16);
+
+    line_t l(vector3(0, 0, 0), vector3(0, 1, 0));
+    p2.from_line(l, 2.0, 0.05, 12);
+
+    triangle_t t(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
+    p3.from_triangle(t);
+
+    p1.export_to_obj("segment.obj");
+    p2.export_to_obj("line.obj");
+    p3.export_to_obj("triangle.obj");
+
+}
 int main() {
 
     test_polyhedron_from_frustum();
     test_polyhedron_from_kdop();
     run_polyhedron_box_tests();
+    test_polyhedron_support_point();
+	test_polyhedron_shape_constructors();
     return 0;
 }

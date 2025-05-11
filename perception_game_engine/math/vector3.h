@@ -142,6 +142,16 @@ struct vector3 {
         return std::abs(length_squared() - 1.0) < epsilon;
     }
 
+    vector3 perpendicular() const {
+        if (std::abs(x) < std::abs(y) && std::abs(x) < std::abs(z))
+            return cross(vector3(1, 0, 0));
+        else if (std::abs(y) < std::abs(z))
+            return cross(vector3(0, 1, 0));
+        else
+            return cross(vector3(0, 0, 1));
+    }
+
+
     vector2 xy() const { return { x, y }; }
     vector2 xz() const { return { x, z }; }
     vector2 yz() const { return { y, z }; }

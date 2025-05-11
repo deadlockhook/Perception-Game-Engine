@@ -3,6 +3,7 @@
 #include "vector4.h"
 
 struct matrix4x4;
+struct ray_t;
 struct plane_t {
     vector3 normal;
     double d;
@@ -97,5 +98,29 @@ struct plane_t {
         printf("  %s plane: normal = (%.3f, %.3f, %.3f), d = %.3f, distance to point = %.6f\n",
             label, normal.x, normal.y, normal.z, d, dist);
     }
+
+    bool intersects_ray(const ray_t& ray, double* out_t = nullptr) const;
+    bool intersects_segment(const vector3& p0, const vector3& p1, vector3* out_point = nullptr) const;
+    int clip_triangle(const vector3 tri[3], vector3 out[4]) const;
+
+    enum class side_t { front, back, intersecting };
+    side_t classify_point(const vector3& p, double epsilon = 1e-6) const;
+    side_t classify_triangle(const vector3 tri[3], double epsilon = 1e-6) const;
+
 };
+
+struct aabb_t;
+struct halfspace_t : public plane_t {
+    halfspace_t() = default;
+    explicit halfspace_t(const plane_t& p) : plane_t(p) {}
+
+    bool contains(const vector3& p, double epsilon = 1e-6) const;
+    bool intersects_sphere(const vector3& center, double radius, double epsilon = 1e-6) const;
+    bool intersects_aabb(const aabb_t& box, double epsilon = 1e-6) const;
+
+    double signed_distance(const vector3& p) const;
+    vector3 closest_point(const vector3& p) const;
+    void flip();
+};
+
 

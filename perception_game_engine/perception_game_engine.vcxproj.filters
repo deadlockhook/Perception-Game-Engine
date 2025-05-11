@@ -114,6 +114,9 @@
     <ClCompile Include="math\geom\kdop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="math\geom\polyhedron.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -216,6 +219,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math\geom\kdop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\geom\polyhedron.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

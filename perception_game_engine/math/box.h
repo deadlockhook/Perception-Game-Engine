@@ -14,7 +14,7 @@ struct box_t {
     static box_t from_center_extent(const vector3& center, const vector3& extent);
 
     vector3 center() const;
-    vector3 extent() const;
+    vector3 extents() const;
     vector3 size() const;
     double volume() const;
     double surface_area() const;

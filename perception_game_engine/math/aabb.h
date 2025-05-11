@@ -11,7 +11,18 @@ struct aabb_t {
 
     aabb_t() : min(), max() {}
     aabb_t(const vector3& min, const vector3& max) : min(min), max(max) {}
-   
+  
+    void get_corners(vector3 out[8]) const {
+        out[0] = { min.x, min.y, min.z };
+        out[1] = { max.x, min.y, min.z };
+        out[2] = { max.x, max.y, min.z };
+        out[3] = { min.x, max.y, min.z };
+        out[4] = { min.x, min.y, max.z };
+        out[5] = { max.x, min.y, max.z };
+        out[6] = { max.x, max.y, max.z };
+        out[7] = { min.x, max.y, max.z };
+    }
+
     bool contains(const vector3& point) const {
         return point.x >= min.x && point.x <= max.x &&
             point.y >= min.y && point.y <= max.y &&

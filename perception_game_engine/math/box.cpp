@@ -18,7 +18,7 @@ vector3 box_t::center() const {
     return transform.transform_point(local_bounds.center());
 }
 
-vector3 box_t::extent() const {
+vector3 box_t::extents() const {
     return local_bounds.extent(); 
 }
 

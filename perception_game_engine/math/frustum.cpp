@@ -17,8 +17,6 @@ frustum_t frustum_t::from_matrix(const matrix4x4& m) {
     return f;
 }
 
-
-
 frustum_t frustum_t::transform(const matrix4x4& m) const {
     frustum_t out;
     for (int i = 0; i < 6; ++i)

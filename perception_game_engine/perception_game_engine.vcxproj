@@ -151,6 +151,7 @@
     <ClCompile Include="math\box.cpp" />
     <ClCompile Include="math\frustum.cpp" />
     <ClCompile Include="math\geom\kdop.cpp" />
+    <ClCompile Include="math\geom\polyhedron.cpp" />
     <ClCompile Include="math\geom\shapes\capsule.cpp" />
     <ClCompile Include="math\geom\shapes\cone.cpp" />
     <ClCompile Include="math\geom\shapes\cylinder.cpp" />
@@ -189,6 +190,7 @@
     <ClInclude Include="math\frustum.h" />
     <ClInclude Include="math\geom\geom.h" />
     <ClInclude Include="math\geom\kdop.h" />
+    <ClInclude Include="math\geom\polyhedron.h" />
     <ClInclude Include="math\math_defs.h" />
     <ClInclude Include="math\matrix4x4.h" />
     <ClInclude Include="math\obb.h" />

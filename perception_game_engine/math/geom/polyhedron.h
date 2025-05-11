@@ -63,6 +63,11 @@ struct polyhedron_t {
     bool from_segment(const vector3& start, const vector3& end, double radius = 0.01, int segments = 12);
     bool from_line(const line_t& line, double extent = 1.0, double radius = 0.01, int segments = 12);
     bool from_triangle(const triangle_t& tri);
+    
+    bool has_duplicate_vertices(double epsilon) const;
+    size_t merge_close_vertices(double epsilon);
+    bool repair(double epsilon = 1e-6);
+    bool is_manifold() const;
 
     bool is_closed() const;
     bool is_convex(double epsilon = 1e-6) const;

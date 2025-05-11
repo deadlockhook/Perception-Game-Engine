@@ -210,31 +210,37 @@ void run_polyhedron_box_tests() {
     test_polyhedron_convexity_closure();
 }
 
-static void test_polyhedron_shape_constructors() {
-    std::cout << "--- Testing polyhedron_t shape generators ---\n";
+void test_polyhedron_utilities() {
+    std::cout << "--- [polyhedron_t mesh utilities test] ---\n";
 
-    polyhedron_t p1, p2, p3;
+    // Construct a cube (with intentional duplicate vertex)
+    polyhedron_t poly;
+    aabb_t box(vector3(-1, -1, -1), vector3(1, 1, 1));
+    poly.from_aabb(box);
 
-    segment_t s(vector3(-1, 0, 0), vector3(1, 0, 0));
-    p1.from_segment(s.start, s.end, 0.05, 16);
+    // Inject duplicate vertex
+    poly.vertices = static_cast<vector3*>(realloc(poly.vertices, sizeof(vector3) * (poly.vertex_count + 1)));
+    poly.vertices[poly.vertex_count] = poly.vertices[0]; // duplicate of vertex 0
+    poly.vertex_count += 1;
 
-    line_t l(vector3(0, 0, 0), vector3(0, 1, 0));
-    p2.from_line(l, 2.0, 0.05, 12);
+    std::cout << "Initial vertex count: " << poly.vertex_count << "\n";
+    std::cout << "Initial manifold: " << (poly.is_manifold() ? "yes" : "no") << "\n";
+    std::cout << "Initial duplicate vertices: " << (poly.has_duplicate_vertices(1e-6) ? "yes" : "no") << "\n";
 
-    triangle_t t(vector3(0, 0, 0), vector3(1, 0, 0), vector3(0, 1, 0));
-    p3.from_triangle(t);
+    size_t merged = poly.merge_close_vertices(1e-6);
+    std::cout << "Merged vertices: " << merged << "\n";
+    std::cout << "Vertex count after merge: " << poly.vertex_count << "\n";
 
-    p1.export_to_obj("segment.obj");
-    p2.export_to_obj("line.obj");
-    p3.export_to_obj("triangle.obj");
+    bool repaired = poly.repair();
+    std::cout << "Repair status: " << (repaired ? "success" : "failed") << "\n";
+    std::cout << "Final manifold: " << (poly.is_manifold() ? "yes" : "no") << "\n";
+    std::cout << "Final duplicate vertices: " << (poly.has_duplicate_vertices(1e-6) ? "yes" : "no") << "\n";
 
+    std::cout << "--- [test done] ---\n";
 }
+
 int main() {
 
-    test_polyhedron_from_frustum();
-    test_polyhedron_from_kdop();
-    run_polyhedron_box_tests();
-    test_polyhedron_support_point();
-	test_polyhedron_shape_constructors();
+    test_polyhedron_utilities();
     return 0;
 }

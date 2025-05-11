@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "../math_defs.h"
 #include "../../crt/s_string.h"
+#include <map>
 
 polyhedron_t::~polyhedron_t() {
     clear();
@@ -861,6 +862,127 @@ bool polyhedron_t::from_triangle(const triangle_t& tri) {
 
     int indices[3] = { 0, 1, 2 };
     set_face(0, indices, 3);
+
+    return true;
+}
+
+size_t polyhedron_t::merge_close_vertices(double epsilon) {
+    if (vertex_count < 2) return 0;
+
+    std::vector<int> remap(vertex_count);
+    for (size_t i = 0; i < vertex_count; ++i)
+        remap[i] = static_cast<int>(i);
+
+    size_t merged = 0;
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        for (size_t j = i + 1; j < vertex_count; ++j) {
+            if ((vertices[i] - vertices[j]).length_squared() < epsilon * epsilon) {
+                remap[j] = static_cast<int>(i);
+                ++merged;
+            }
+        }
+    }
+
+    std::vector<vector3> new_vertices;
+    std::vector<int> new_indices(vertex_count, -1);
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        if (remap[i] == static_cast<int>(i)) {
+            new_indices[i] = static_cast<int>(new_vertices.size());
+            new_vertices.push_back(vertices[i]);
+        }
+        else {
+            new_indices[i] = new_indices[remap[i]];
+        }
+    }
+
+    for (size_t f = 0; f < face_count; ++f) {
+        polyhedron_face_t& face = faces[f];
+        for (size_t i = 0; i < face.count; ++i) {
+            face.indices[i] = new_indices[face.indices[i]];
+        }
+    }
+
+    size_t old_count = vertex_count;
+    free(vertices);
+    vertex_count = new_vertices.size();
+    vertices = static_cast<vector3*>(malloc(sizeof(vector3) * vertex_count));
+    for (size_t i = 0; i < vertex_count; ++i)
+        vertices[i] = new_vertices[i];
+
+    return old_count - vertex_count;
+}
+
+bool polyhedron_t::has_duplicate_vertices(double epsilon) const {
+    if (vertex_count < 2) return false;
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        for (size_t j = i + 1; j < vertex_count; ++j) {
+            if ((vertices[i] - vertices[j]).length_squared() < epsilon * epsilon)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool polyhedron_t::is_manifold() const {
+    if (!is_valid()) return false;
+
+    std::map<std::pair<int, int>, int> edge_counts;
+
+    for (size_t f = 0; f < face_count; ++f) {
+        const polyhedron_face_t& face = faces[f];
+
+        for (size_t i = 0; i < face.count; ++i) {
+            int a = face.indices[i];
+            int b = face.indices[(i + 1) % face.count];
+
+            if (a > b) std::swap(a, b); 
+            edge_counts[{a, b}]++;
+        }
+    }
+
+    for (const auto& kv : edge_counts) {
+        if (kv.second != 2)
+            return false;
+    }
+
+    return true;
+}
+
+bool polyhedron_t::repair(double epsilon) {
+    if (!is_valid()) return false;
+
+    size_t merged = merge_close_vertices(epsilon);
+
+    size_t valid_faces = 0;
+    for (size_t f = 0; f < face_count; ++f) {
+        polyhedron_face_t& face = faces[f];
+
+        bool degenerate = false;
+        for (size_t i = 0; i < face.count; ++i) {
+            int a = face.indices[i];
+            int b = face.indices[(i + 1) % face.count];
+
+            if (a == b) {
+                degenerate = true;
+                break;
+            }
+        }
+
+        if (!degenerate) {
+            if (valid_faces != f)
+                faces[valid_faces] = faces[f];
+            ++valid_faces;
+        }
+        else {
+            free(faces[f].indices);
+        }
+    }
+
+    face_count = valid_faces;
 
     return true;
 }

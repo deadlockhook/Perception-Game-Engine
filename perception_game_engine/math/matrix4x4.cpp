@@ -437,6 +437,12 @@ matrix4x4 matrix4x4::inverse_affine() const {
     return result;
 }
 
+vector3 matrix4x4::get_scale() const {
+    vector3 x(m[0][0], m[1][0], m[2][0]);
+    vector3 y(m[0][1], m[1][1], m[2][1]);
+    vector3 z(m[0][2], m[1][2], m[2][2]);
+    return vector3(x.length(), y.length(), z.length());
+}
 
 
 void matrix4x4::print() const {
@@ -449,4 +455,5 @@ void matrix4x4::print() const {
         printf("]\n");
     }
 }
+
 

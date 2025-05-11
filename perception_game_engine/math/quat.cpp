@@ -161,3 +161,17 @@ void quat::to_array(double out[4]) const {
 quat quat::from_array(const double in[4]) {
     return quat(in[0], in[1], in[2], in[3]);
 }
+
+vector3 quat::rotate(const vector3& v) const {
+    vector3 u(x, y, z);
+    double s = w;
+
+    return u * (2.0 * u.dot(v)) +
+        v * (s * s - u.dot(u)) +
+        u.cross(v) * (2.0 * s);
+}
+
+bool quat::is_valid() const {
+    return std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
+        std::isfinite(w) && std::abs(this->length() - 1.0) < 1e-6;
+}

@@ -9,7 +9,7 @@ box_t::box_t(const aabb_t& bounds, const matrix4x4& transform)
 }
 
 box_t box_t::from_center_extent(const vector3& center, const vector3& extent) {
-    aabb_t local = aabb_t::from_center_extent(vector3::zero(), extent);
+    aabb_t local = aabb_t::from_center_extents(vector3::zero(), extent);
     matrix4x4 m = matrix4x4::translate(center);
     return box_t(local, m);
 }

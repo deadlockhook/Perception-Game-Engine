@@ -64,7 +64,7 @@ struct matrix4x4 {
             m[3][c1] + (subtract ? -m[3][c2] : m[3][c2])
         );
     }
-
+    vector3 get_scale() const;
     void print() const;
 
 };

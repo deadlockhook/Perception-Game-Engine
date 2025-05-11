@@ -102,6 +102,18 @@
     <ClCompile Include="math\geom\shapes\disc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="math\geom\shapes\line.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\torus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\ellipsoid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\kdop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -201,6 +213,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math\box.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\geom\kdop.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

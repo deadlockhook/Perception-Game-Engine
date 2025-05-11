@@ -42,7 +42,7 @@ aabb_t obb_t::to_aabb() const {
     vector3 extent = vector3::zero();
     for (int i = 0; i < 3; ++i)
         extent += axes[i].abs() * half_extents[i];
-    return aabb_t::from_center_extent(center, extent);
+    return aabb_t::from_center_extents(center, extent);
 }
 
 bool obb_t::intersects(const obb_t& b) const {

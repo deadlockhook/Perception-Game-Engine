@@ -159,3 +159,23 @@ struct vector3 {
     static vector3 forward() { return { 0.0, 0.0, 1.0 }; }
     static vector3 backward() { return { 0.0, 0.0, -1.0 }; }
 };
+
+inline vector3 operator/(const vector3& lhs, const vector3& rhs) { return vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z); }
+inline vector3& operator/=(vector3& lhs, const vector3& rhs) {
+    lhs.x /= rhs.x;
+    lhs.y /= rhs.y;
+    lhs.z /= rhs.z;
+    return lhs;
+}
+inline vector3 operator*(const vector3& a, const vector3& b) {
+    return vector3(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+inline vector3& operator*=(vector3& a, const vector3& b) {
+    a.x *= b.x;
+    a.y *= b.y;
+    a.z *= b.z;
+    return a;
+}
+inline vector3 abs(const vector3& v) {
+    return vector3(std::abs(v.x), std::abs(v.y), std::abs(v.z));
+}

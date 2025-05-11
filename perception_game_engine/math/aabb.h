@@ -22,7 +22,7 @@ struct aabb_t {
         return contains(point);
     }
 
-    static aabb_t from_center_extent(const vector3& center, const vector3& extent) {
+    static aabb_t from_center_extents(const vector3& center, const vector3& extent) {
         return aabb_t(center - extent, center + extent);
     }
 

@@ -42,4 +42,8 @@ struct quat {
     double dot(const quat& other) const;
 
     static double angle_between(const quat& a, const quat& b);
+
+    vector3 rotate(const vector3& v) const;
+    bool is_valid() const;
+
 };

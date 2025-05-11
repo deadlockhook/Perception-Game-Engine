@@ -87,6 +87,21 @@
     <ClCompile Include="math\geom\shapes\triangle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="math\box.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\segment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\cylinder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\cone.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\geom\shapes\disc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -183,6 +198,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math\geom\geom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\box.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

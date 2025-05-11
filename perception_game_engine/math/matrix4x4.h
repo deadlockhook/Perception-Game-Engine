@@ -47,6 +47,25 @@ struct matrix4x4 {
     static matrix4x4 orthographic(float left, float right, float bottom, float top, float z_near, float z_far);
     static matrix4x4 look_at(const vector3& eye, const vector3& target, const vector3& up);
     
+    vector4 row_sum( int c1, int c2, bool subtract = false) {
+        return vector4(
+            m[0][c1] + (subtract ? -m[0][c2] : m[0][c2]),
+            m[1][c1] + (subtract ? -m[1][c2] : m[1][c2]),
+            m[2][c1] + (subtract ? -m[2][c2] : m[2][c2]),
+            m[3][c1] + (subtract ? -m[3][c2] : m[3][c2])
+        );
+    }
+
+    static vector4 row_sum(const matrix4x4& m, int c1, int c2, bool subtract = false) {
+        return vector4(
+            m[0][c1] + (subtract ? -m[0][c2] : m[0][c2]),
+            m[1][c1] + (subtract ? -m[1][c2] : m[1][c2]),
+            m[2][c1] + (subtract ? -m[2][c2] : m[2][c2]),
+            m[3][c1] + (subtract ? -m[3][c2] : m[3][c2])
+        );
+    }
+
     void print() const;
 
 };
+

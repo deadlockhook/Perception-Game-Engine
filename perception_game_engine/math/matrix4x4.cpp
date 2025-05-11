@@ -75,21 +75,11 @@ matrix4x4 matrix4x4::trs(const vector3& t, const quat& r, const vector3& s) {
     return translate(t) * rotate(r) * scale(s);
 }
 
-
 vector3 matrix4x4::transform_point(const vector3& v) const {
-    float x = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3];
-    float y = m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3];
-    float z = m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3];
-    float w = m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3];
-
-    if (w != 0.0f) {
-        x /= w;
-        y /= w;
-        z /= w;
-    }
-
-    return { x, y, z };
+    vector4 r = transform_vec4(vector4(v, 1.0));
+    return r.to_cartesian();
 }
+
 
 vector3 matrix4x4::transform_direction(const vector3& v) const {
     float x_ = static_cast<float>(v.x);
@@ -182,30 +172,34 @@ matrix4x4 matrix4x4::orthographic(float left, float right, float bottom, float t
 }
 
 matrix4x4 matrix4x4::look_at(const vector3& eye, const vector3& target, const vector3& up) {
-    vector3 f = (target - eye).normalized(); 
-    vector3 r = f.cross(up).normalized();    
-    vector3 u = r.cross(f);                 
+    vector3 f = (target - eye).normalized();
+    vector3 r = f.cross(up).normalized();
+    vector3 u = r.cross(f);
 
     matrix4x4 result = identity();
-    result.m[0][0] = static_cast<float>(r.x);
-    result.m[1][0] = static_cast<float>(r.y);
-    result.m[2][0] = static_cast<float>(r.z);
 
-    result.m[0][1] = static_cast<float>(u.x);
-    result.m[1][1] = static_cast<float>(u.y);
-    result.m[2][1] = static_cast<float>(u.z);
+    result[0][0] = static_cast<float>(r.x);
+    result[0][1] = static_cast<float>(r.y);
+    result[0][2] = static_cast<float>(r.z);
+    result[0][3] = static_cast<float>(-r.dot(eye));
 
-    result.m[0][2] = static_cast<float>(-f.x);
-    result.m[1][2] = static_cast<float>(-f.y);
-    result.m[2][2] = static_cast<float>(-f.z);
+    result[1][0] = static_cast<float>(u.x);
+    result[1][1] = static_cast<float>(u.y);
+    result[1][2] = static_cast<float>(u.z);
+    result[1][3] = static_cast<float>(-u.dot(eye));
 
-    result.m[3][0] = static_cast<float>(-r.dot(eye));
-    result.m[3][1] = static_cast<float>(-u.dot(eye));
-    result.m[3][2] = static_cast<float>(f.dot(eye));
+    result[2][0] = static_cast<float>(-f.x);
+    result[2][1] = static_cast<float>(-f.y);
+    result[2][2] = static_cast<float>(-f.z);
+    result[2][3] = static_cast<float>(f.dot(eye));
+
+    result[3][0] = 0.0f;
+    result[3][1] = 0.0f;
+    result[3][2] = 0.0f;
+    result[3][3] = 1.0f;
 
     return result;
 }
-
 
 matrix4x4 matrix4x4::inverted() const {
     matrix4x4 inv;

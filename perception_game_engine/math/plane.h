@@ -40,9 +40,12 @@ struct plane_t {
         double d = -n.dot(a);
         return plane_t(n, d);
     }
+
     static plane_t from_vector4(const vector4& v) {
-        return plane_t(vector3(v.x, v.y, v.z), v.w);
+        vector3 n(v.x, v.y, v.z);
+        return plane_t(n, -v.w); 
     }
+
 
     double distance_to_point(const vector3& point) const {
         return normal.dot(point) + d;

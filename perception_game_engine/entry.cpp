@@ -175,6 +175,120 @@ void run_extended_matrix_tests() {
     std::cout << "✅ matrix4x4: Extended tests passed.\n";
 }
 
+
+bool approx(double a, double b, double eps = 1e-6) {
+    return std::abs(a - b) < eps;
+}
+
+bool approx_vec(const vector3& a, const vector3& b, double eps = 1e-6) {
+    return (a - b).length_squared() < eps * eps;
+}
+
+void print_matrix(const matrix4x4& m, const char* label) {
+    std::cout << "[" << label << "]\n";
+    for (int r = 0; r < 4; ++r) {
+        std::cout << "  ";
+        for (int c = 0; c < 4; ++c)
+            std::cout << m.m[r][c] << " ";
+        std::cout << "\n";
+    }
+}
+void test_frustum_from_matrix_contains() {
+    matrix4x4 proj = matrix4x4::perspective(90.0f * DEG2RAD, 1.0f, 0.1f, 100.0f);
+    matrix4x4 view = matrix4x4::look_at({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+    matrix4x4 view_proj = view * proj; // ✅ FIXED
+
+    print_matrix(proj, "Perspective");
+    print_matrix(view, "View");
+    print_matrix(view_proj, "ViewProj");
+
+    frustum_t fr = frustum_t::from_matrix(view_proj);
+    std::cout << "[ frustum.from_matrix(view_proj) ]\n";
+    for (int i = 0; i < 6; ++i) {
+        const plane_t& p = fr.get_plane(i);
+        double d = p.distance_to_point({ 100, 100, 100 });
+        std::cout << "Plane " << i << ": n = " << p.normal.x << "," << p.normal.y << "," << p.normal.z
+            << "  d = " << p.d << " → dist = " << d << "\n";
+    }
+
+    for (int i = 0; i < 6; ++i) {
+        double dist = fr.get_plane(i).distance_to_point({ 0, 0, 0 });
+        std::cout << "Plane " << i << " distance to origin: " << dist << "\n";
+    }
+
+    assert(fr.contains_point({ 0, 0, -1 })); // Inside view cone
+
+    assert(fr.contains_point({ 0.5, 0.5, -0.5 })); // ✅ it's inside
+
+    assert(!fr.contains_point({ 100, 100, 100 }));
+}
+
+void test_frustum_intersects_aabb_sphere() {
+    matrix4x4 proj = matrix4x4::perspective(90.0f * DEG2RAD, 1.0f, 0.1f, 100.0f);
+    matrix4x4 view = matrix4x4::look_at({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+    frustum_t fr = frustum_t::from_matrix(view * proj); // ✅ correct order
+
+    aabb_t inside = aabb_t::from_center_extent({ 0, 0, 0 }, { 1, 1, 1 });
+    aabb_t outside = aabb_t::from_center_extent({ 100, 100, 100 }, { 1, 1, 1 });
+
+    assert(fr.intersects_aabb(inside));
+    assert(!fr.intersects_aabb(outside));
+
+    assert(fr.intersects_sphere({ 0, 0, 0 }, 1.0));
+    assert(!fr.intersects_sphere({ 100, 0, 0 }, 1.0));
+}
+
+void test_frustum_corners_roundtrip() {
+    matrix4x4 proj = matrix4x4::perspective(60.0f * DEG2RAD, 1.0f, 0.1f, 10.0f);
+    matrix4x4 view = matrix4x4::look_at({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+    matrix4x4 view_proj = view * proj; // ✅ correct order
+
+    frustum_t f = frustum_t::from_matrix(view_proj);
+
+    vector3 corners[8];
+    f.get_corners(corners, view_proj.inverse());
+
+    frustum_t reconstructed = frustum_t::from_corners(corners);
+
+    for (int i = 0; i < 6; ++i) {
+        if (!f.planes[i].equals(reconstructed.planes[i], 1e-4)) {
+            const vector3& orig_n = f.planes[i].normal;
+            const vector3& rebuilt_n = reconstructed.planes[i].normal;
+            std::cout << "Plane " << i << " mismatch:\n";
+            std::cout << "  Original: (" << orig_n.x << ", " << orig_n.y << ", " << orig_n.z << "), d = " << f.planes[i].d << "\n";
+            std::cout << "  Rebuilt:  (" << rebuilt_n.x << ", " << rebuilt_n.y << ", " << rebuilt_n.z << "), d = " << reconstructed.planes[i].d << "\n";
+        }
+    }
+}
+
+void test_frustum_split_world() {
+    matrix4x4 proj = matrix4x4::perspective(90.0f * DEG2RAD, 1.0f, 0.1f, 100.0f);
+    matrix4x4 view = matrix4x4::look_at({ 0, 0, 5 }, { 0, 0, 0 }, { 0, 1, 0 });
+
+    frustum_t sub = frustum_t::split_world(0.0f, 0.1f, proj, view);
+
+    std::cout << "[split_world debug]\n";
+    std::cout << "Checking point { 0, 0, 0 }\n";
+
+    for (int i = 0; i < 6; ++i) {
+        const plane_t& p = sub.planes[i];
+        double dist = p.distance_to_point({ 0, 0, 0 });
+        std::cout << "Plane " << i << ": n=("
+            << p.normal.x << "," << p.normal.y << "," << p.normal.z
+            << "), d=" << p.d << " => distance = " << dist << "\n";
+    }
+    assert(sub.contains_point({ 0, 0, 0 }));
+    assert(!sub.contains_point({ 100, 0, 0 }));
+}
+
+void run_frustum_tests() {
+    test_frustum_from_matrix_contains();
+    test_frustum_intersects_aabb_sphere();
+    test_frustum_corners_roundtrip();
+    test_frustum_split_world();
+    std::cout << "✅ frustum_t: All tests passed.\n";
+}
+
 int main() {
     test_identity_and_zero();
     test_translation();
@@ -187,5 +301,6 @@ int main() {
 
     std::cout << "✅ matrix4x4: All tests passed.\n";
 	run_extended_matrix_tests();
+    run_frustum_tests();
     return 0;
 }

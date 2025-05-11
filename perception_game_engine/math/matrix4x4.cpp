@@ -150,6 +150,7 @@ matrix4x4 matrix4x4::perspective(float fov_y_rad, float aspect, float z_near, fl
     result.m[2][2] = (z_far + z_near) * range_inv;
     result.m[2][3] = -1.0f;
     result.m[3][2] = (2.0f * z_far * z_near) * range_inv;
+    result.m[3][3] = 0.0f;
     return result;
 }
 

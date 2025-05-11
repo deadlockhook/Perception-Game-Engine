@@ -4,19 +4,19 @@
 
 frustum_t frustum_t::from_matrix(const matrix4x4& m) {
     frustum_t f;
-
-    f.planes[_left] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 0));
+    f.planes[_left] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 0, false));
     f.planes[_right] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 0, true));
-    f.planes[_bottom] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 1));
+    f.planes[_bottom] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 1, false));
     f.planes[_top] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 1, true));
-    f.planes[_near] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 2));
-    f.planes[_far] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 2, true));
+    f.planes[_near] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 2, true));
+    f.planes[_far] = plane_t::from_vector4(matrix4x4::row_sum(m, 3, 2, false));
 
     for (int i = 0; i < 6; ++i)
         f.planes[i] = f.planes[i].normalized();
 
     return f;
 }
+
 
 
 frustum_t frustum_t::transform(const matrix4x4& m) const {
@@ -41,13 +41,14 @@ void frustum_t::get_corners(vector3 out[8], const matrix4x4& inv_view_proj) cons
 frustum_t frustum_t::from_corners(const vector3 corners[8]) {
     frustum_t f;
 
-    // Use triangle winding to form planes
-    f.planes[_left] = plane_t::from_points(corners[0], corners[4], corners[6]);
-    f.planes[_right] = plane_t::from_points(corners[5], corners[1], corners[7]);
-    f.planes[_bottom] = plane_t::from_points(corners[0], corners[1], corners[5]);
-    f.planes[_top] = plane_t::from_points(corners[7], corners[3], corners[2]);
-    f.planes[_near] = plane_t::from_points(corners[0], corners[2], corners[1]);
-    f.planes[_far] = plane_t::from_points(corners[5], corners[7], corners[4]);
+
+    f.planes[0] = plane_t::from_points(corners[0], corners[4], corners[6]);
+    f.planes[1] = plane_t::from_points(corners[1], corners[3], corners[7]); 
+    f.planes[2] = plane_t::from_points(corners[0], corners[1], corners[5]); 
+    f.planes[3] = plane_t::from_points(corners[2], corners[6], corners[7]); 
+    f.planes[4] = plane_t::from_points(corners[3], corners[2], corners[0]); 
+
+    f.planes[5] = plane_t::from_points(corners[4], corners[5], corners[7]); 
 
     return f;
 }
@@ -64,22 +65,43 @@ frustum_t frustum_t::split(float near_frac, float far_frac, const matrix4x4& pro
 }
 
 frustum_t frustum_t::split_world(float near_frac, float far_frac, const matrix4x4& proj, const matrix4x4& view) {
-    matrix4x4 view_proj = proj * view;
-    vector3 corners[8];
+    matrix4x4 view_proj = view * proj;
 
-    frustum_t temp = from_matrix(view_proj);
-    temp.get_corners(corners, view_proj.inverse());
+    matrix4x4 inv = view_proj.inverse();
 
-    return from_corners(corners);
+    vector3 corners[8] = {
+        {-1, -1, -1}, { 1, -1, -1}, {-1,  1, -1}, { 1,  1, -1},
+        {-1, -1,  1}, { 1, -1,  1}, {-1,  1,  1}, { 1,  1,  1}, 
+    };
+
+    vector3 world_corners[8];
+    for (int i = 0; i < 8; ++i) {
+        vector4 clip(corners[i], 1.0);
+        vector4 world = inv.transform_vec4(clip);
+        world_corners[i] = world.to_cartesian();
+    }
+
+    vector3 split_corners[8];
+    for (int i = 0; i < 4; ++i) {
+        const vector3& near = world_corners[i];
+        const vector3& far = world_corners[i + 4];
+
+        split_corners[i] = vector3::lerp(near, far, near_frac); 
+        split_corners[i + 4] = vector3::lerp(near, far, far_frac);  
+    }
+
+    return frustum_t::from_corners(split_corners);
 }
 
 
 bool frustum_t::contains_point(const vector3& p, double epsilon) const {
-    for (int i = 0; i < 6; ++i)
-        if (!planes[i].is_in_front(p, epsilon))
+    for (int i = 0; i < 6; ++i) {
+        if (planes[i].distance_to_point(p) < -epsilon)
             return false;
+    }
     return true;
 }
+
 
 bool frustum_t::intersects_sphere(const vector3& center, double radius, double epsilon) const {
     for (int i = 0; i < 6; ++i) {

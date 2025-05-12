@@ -1,24 +1,46 @@
 #include "quat.h"
 #include "math_defs.h"
+#include <iostream>
 
 quat quat::identity() {
     return quat(0.0, 0.0, 0.0, 1.0);
 }
 
-quat quat::from_axis_angle(const vector3& axis, double angle) {
-    double half = angle * 0.5;
-    double s = std::sin(half);
-    return quat(std::cos(half), axis.x * s, axis.y * s, axis.z * s);
+quat quat::from_axis_angle(const vector3& axis, double radians) {
+    vector3 norm_axis = axis.normalized();
+    double half_angle = radians * 0.5;
+    double sin_half = std::sin(half_angle);
+    double cos_half = std::cos(half_angle);
+
+    quat result(
+        norm_axis.x * sin_half,
+        norm_axis.y * sin_half,
+        norm_axis.z * sin_half,
+        cos_half
+    );
+
+    return result;
 }
 
+vector3 quat::operator*(const vector3& v) const {
+    vector3 qv(x, y, z);
+    vector3 uv = qv.cross(v);
+    vector3 uuv = qv.cross(uv);
+    uv *= (2.0 * w);
+    uuv *= 2.0;
+    vector3 result = v + uv + uuv;
+    return result;
+}
 
-quat quat::from_euler(double pitch, double yaw, double roll) {
-    double cy = std::cos(yaw * 0.5);
-    double sy = std::sin(yaw * 0.5);
-    double cp = std::cos(pitch * 0.5);
-    double sp = std::sin(pitch * 0.5);
-    double cr = std::cos(roll * 0.5);
-    double sr = std::sin(roll * 0.5);
+quat quat::from_euler(const vector3& angles) {
+    auto rad_angles = angles.to_radians();
+
+    double cy = std::cos(rad_angles.y * 0.5);
+    double sy = std::sin(rad_angles.y * 0.5);
+    double cp = std::cos(rad_angles.x * 0.5);
+    double sp = std::sin(rad_angles.x * 0.5);
+    double cr = std::cos(rad_angles.z * 0.5);
+    double sr = std::sin(rad_angles.z * 0.5);
 
     return quat(
         sr * cp * cy - cr * sp * sy,
@@ -37,14 +59,8 @@ quat quat::operator*(const quat& rhs) const {
     );
 }
 
-vector3 quat::operator*(const vector3& v) const {
-    vector3 qv(x, y, z);
-    vector3 uv = qv.cross(v);
-    vector3 uuv = qv.cross(uv);
-    uv *= (2.0 * w);
-    uuv *= 2.0;
-    return v + uv + uuv;
-}
+
+
 
 double quat::length() const {
     return std::sqrt(x * x + y * y + z * z + w * w);
@@ -175,3 +191,15 @@ bool quat::is_valid() const {
     return std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
         std::isfinite(w) && std::abs(this->length() - 1.0) < 1e-6;
 }
+
+bool quat::equals(const quat& other, double epsilon) const {
+    return this->normalized().equals_exact(other.normalized(), epsilon);
+}
+
+bool quat::equals_exact(const quat& other, double epsilon) const {
+    return std::abs(x - other.x) <= epsilon &&
+        std::abs(y - other.y) <= epsilon &&
+        std::abs(z - other.z) <= epsilon &&
+        std::abs(w - other.w) <= epsilon;
+}
+

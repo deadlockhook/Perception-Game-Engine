@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include <cmath>
 #include <cstdint>
 #include "vector3.h"
@@ -67,5 +66,7 @@ struct matrix4x4 {
     vector3 get_scale() const;
     void print() const;
 
+    quat get_rotation() const;
+    void orthonormalize_basis();
 };
 

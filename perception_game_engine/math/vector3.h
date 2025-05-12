@@ -3,7 +3,7 @@
 #include <cstdint>
 #include "vector2.h"
 #include <algorithm>
-
+#include "math_defs.h"
 struct vector3 {
     double x = 0.0;
     double y = 0.0;
@@ -168,6 +168,33 @@ struct vector3 {
     static vector3 right() { return { 1.0, 0.0, 0.0 }; }
     static vector3 forward() { return { 0.0, 0.0, 1.0 }; }
     static vector3 backward() { return { 0.0, 0.0, -1.0 }; }
+   
+    vector3 to_degrees() const {
+        return vector3(x * RAD2DEG, y * RAD2DEG, z * RAD2DEG);
+    }
+
+	vector3 to_radians() const {
+		return vector3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD);
+	}
+
+    vector3 normalize_angles() const {
+        vector3 result = *this;
+        constexpr double full_circle = 360.0;
+
+        auto wrap = [](double angle) {
+            angle = std::fmod(angle, full_circle);
+            if (angle > 180.0) angle -= full_circle;
+            if (angle < -180.0) angle += full_circle;
+            return angle;
+            };
+
+        result.x = wrap(result.x);
+        result.y = wrap(result.y);
+        result.z = wrap(result.z);
+
+        return result;
+    }
+
 };
 
 inline vector3 operator/(const vector3& lhs, const vector3& rhs) { return vector3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z); }
@@ -189,3 +216,4 @@ inline vector3& operator*=(vector3& a, const vector3& b) {
 inline vector3 abs(const vector3& v) {
     return vector3(std::abs(v.x), std::abs(v.y), std::abs(v.z));
 }
+

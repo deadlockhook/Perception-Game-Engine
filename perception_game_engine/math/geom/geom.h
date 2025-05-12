@@ -2,7 +2,7 @@
 #include "../vector3.h"
 #include "../ray.h"
 #include "../aabb.h"
-
+#include "../../crt/s_vector.h"
 //capsule_t
 //sphere_t
 //ellipsoid_t
@@ -315,3 +315,45 @@ struct torus_t {
     bool operator!=(const torus_t& other) const;
 };
 
+struct geometry_collection_t {
+    s_vector<capsule_t> capsules;
+    s_vector<sphere_t> spheres;
+    s_vector<ellipsoid_t> ellipsoids;
+    s_vector<triangle_t> triangles;
+    s_vector<segment_t> segments;
+    s_vector<cylinder_t> cylinders;
+    s_vector<cone_t> cones;
+    s_vector<disc_t> discs;
+    s_vector<line_t> lines;
+    s_vector<torus_t> torii;
+	aabb_t bounds;
+    geometry_collection_t() = default;
+
+    void clear() {
+        capsules.clear();
+        spheres.clear();
+        ellipsoids.clear();
+        triangles.clear();
+        segments.clear();
+        cylinders.clear();
+        cones.clear();
+        discs.clear();
+        lines.clear();
+        torii.clear();
+    }
+
+    bool empty() const {
+        return capsules.empty() && spheres.empty() && ellipsoids.empty() &&
+            triangles.empty() && segments.empty() && cylinders.empty() &&
+            cones.empty() && discs.empty() && lines.empty() && torii.empty();
+    }
+
+    size_t total_primitives() const {
+        return capsules.size() + spheres.size() + ellipsoids.size() +
+            triangles.size() + segments.size() + cylinders.size() +
+            cones.size() + discs.size() + lines.size() + torii.size();
+    }
+
+    void update_bounds();
+    aabb_t compute_aabb() const;
+};

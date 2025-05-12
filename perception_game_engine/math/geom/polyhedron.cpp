@@ -163,7 +163,10 @@ vector3 polyhedron_t::get_vertex(size_t index) const {
 
 bool polyhedron_t::from_frustum(const frustum_t& f, const matrix4x4& inv_view_proj) {
     vector3 corners[8];
-    f.get_corners(corners, inv_view_proj); 
+    f.get_corners(corners, inv_view_proj);
+    for (int i = 0; i < 8; ++i)
+        printf("corner[%d]: (%.3f, %.3f, %.3f)\n", i, corners[i].x, corners[i].y, corners[i].z);
+
 
     static const int face_indices[6][4] = {
         {0, 1, 2, 3},
@@ -241,21 +244,34 @@ bool polyhedron_t::from_box(const box_t& box) {
     if (!box.is_valid())
         return false;
 
-    vector3 corners[8];
-    box.get_corners(corners);
-
-    static const int face_indices[6][4] = {
-        {0, 1, 2, 3}, 
-        {4, 5, 6, 7}, 
-        {0, 4, 5, 1}, 
-        {1, 5, 6, 2}, 
-        {2, 6, 7, 3}, 
-        {3, 7, 4, 0}  
+    vector3 local_corners[8] = {
+       {box.local_bounds.min.x, box.local_bounds.min.y, box.local_bounds.min.z},
+       {box.local_bounds.max.x, box.local_bounds.min.y, box.local_bounds.min.z},
+       {box.local_bounds.max.x, box.local_bounds.max.y, box.local_bounds.min.z},
+       {box.local_bounds.min.x, box.local_bounds.max.y, box.local_bounds.min.z},
+       {box.local_bounds.min.x, box.local_bounds.min.y, box.local_bounds.max.z},
+       {box.local_bounds.max.x, box.local_bounds.min.y, box.local_bounds.max.z},
+       {box.local_bounds.max.x, box.local_bounds.max.y, box.local_bounds.max.z},
+       {box.local_bounds.min.x, box.local_bounds.max.y, box.local_bounds.max.z},
     };
+
+    vector3 world_corners[8];
+    for (int i = 0; i < 8; ++i)
+        world_corners[i] = box.transform.transform_point(local_corners[i]);
+
 
     allocate(8, 6);
     for (int i = 0; i < 8; ++i)
-        vertices[i] = corners[i];
+        vertices[i] = world_corners[i];
+
+    static const int face_indices[6][4] = {
+        {0, 1, 2, 3},
+        {4, 5, 6, 7},
+        {0, 4, 5, 1},
+        {1, 5, 6, 2},
+        {2, 6, 7, 3},
+        {3, 7, 4, 0}
+    };
 
     for (int i = 0; i < 6; ++i)
         set_face(i, face_indices[i], 4);

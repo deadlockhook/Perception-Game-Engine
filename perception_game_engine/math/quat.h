@@ -18,13 +18,14 @@ struct quat {
     quat operator*(const quat& rhs) const;
     vector3 operator*(const vector3& v) const;
 
+
     quat operator-(const quat& rhs) const {
         return quat(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
     }
 
     static quat identity();
     static quat from_axis_angle(const vector3& axis, double radians);
-    static quat from_euler(double pitch_rad, double yaw_rad, double roll_rad);
+    static quat from_euler(const vector3& angles);
 
     double length() const;
     quat normalized() const;
@@ -45,5 +46,6 @@ struct quat {
 
     vector3 rotate(const vector3& v) const;
     bool is_valid() const;
-
+    bool equals(const quat& other, double epsilon) const;
+    bool equals_exact(const quat& other, double epsilon) const;
 };

@@ -1,8 +1,8 @@
 #pragma once
 
-typedef class entity_t;
-typedef class entity_layer_t;
-typedef class component_t;
+class entity_t;
+class entity_layer_t;
+class component_t;
 struct thread_storage_t
 {
 	entity_t* current_entity = nullptr;

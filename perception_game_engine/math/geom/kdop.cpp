@@ -47,3 +47,4 @@ const std::array<vector3, 13>& kdop_t<13>::get_axes() {
     };
     return axes;
 }
+

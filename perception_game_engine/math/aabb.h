@@ -9,9 +9,28 @@ struct aabb_t {
     vector3 min;
     vector3 max;
 
+
     aabb_t() : min(), max() {}
     aabb_t(const vector3& min, const vector3& max) : min(min), max(max) {}
-  
+    
+    aabb_t& operator+=(const aabb_t& other) {
+        this->expand(other);
+        return *this;
+    }
+
+    aabb_t operator+(const aabb_t& other) const {
+        aabb_t result = *this;
+        result.expand(other);
+        return result;
+    }
+
+    static aabb_t from_points(const vector3& a, const vector3& b, const vector3& c) {
+        aabb_t box(a, a);
+        box.expand(b);
+        box.expand(c);
+        return box;
+    }
+
     void get_corners(vector3 out[8]) const {
         out[0] = { min.x, min.y, min.z };
         out[1] = { max.x, min.y, min.z };

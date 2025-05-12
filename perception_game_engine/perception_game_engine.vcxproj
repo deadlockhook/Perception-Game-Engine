@@ -150,6 +150,7 @@
     <ClCompile Include="math\aabb.cpp" />
     <ClCompile Include="math\box.cpp" />
     <ClCompile Include="math\frustum.cpp" />
+    <ClCompile Include="math\geom\geom.cpp" />
     <ClCompile Include="math\geom\kdop.cpp" />
     <ClCompile Include="math\geom\polyhedron.cpp" />
     <ClCompile Include="math\geom\shapes\capsule.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="crt\s_map.h" />
     <ClInclude Include="crt\s_node_list.h" />
     <ClInclude Include="crt\s_string_pool.h" />
+    <ClInclude Include="engine\component_system\comp_transform.h" />
     <ClInclude Include="engine\entity_system\entity_system.h" />
     <ClInclude Include="engine\hwnd\window_manager.h" />
     <ClInclude Include="engine\render\render_device.h" />
@@ -198,6 +200,7 @@
     <ClInclude Include="math\plane.h" />
     <ClInclude Include="math\quat.h" />
     <ClInclude Include="math\ray.h" />
+    <ClInclude Include="math\transform.h" />
     <ClInclude Include="math\vector2.h" />
     <ClInclude Include="math\vector3.h" />
     <ClInclude Include="math\vector4.h" />

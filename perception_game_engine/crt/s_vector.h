@@ -334,7 +334,9 @@ public:
     const T* data() const { return m_memory; }
 
     size_t count() const { return m_count; }
+	size_t size() const { return m_count; }
 	size_t capacity() const { return m_capacity; }
+	bool empty() const { return m_count == 0; }
 private:
     v_heap_mem m_buffer;
     T* m_memory = nullptr;

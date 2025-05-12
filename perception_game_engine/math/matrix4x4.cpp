@@ -457,3 +457,71 @@ void matrix4x4::print() const {
 }
 
 
+quat matrix4x4::get_rotation() const {
+    vector3 x_axis(m[0][0], m[1][0], m[2][0]);
+    vector3 y_axis(m[0][1], m[1][1], m[2][1]);
+    vector3 z_axis(m[0][2], m[1][2], m[2][2]);
+
+    x_axis = x_axis.normalized();
+    y_axis = y_axis.normalized();
+    z_axis = z_axis.normalized();
+
+    double trace = x_axis.x + y_axis.y + z_axis.z;
+    quat q;
+
+    if (trace > 0.0) {
+        double s = 0.5 / std::sqrt(trace + 1.0);
+        q.w = 0.25 / s;
+        q.x = (y_axis.z - z_axis.y) * s;
+        q.y = (z_axis.x - x_axis.z) * s;
+        q.z = (x_axis.y - y_axis.x) * s;
+    }
+    else {
+        if (x_axis.x > y_axis.y && x_axis.x > z_axis.z) {
+            double s = 2.0 * std::sqrt(1.0 + x_axis.x - y_axis.y - z_axis.z);
+            q.w = (y_axis.z - z_axis.y) / s;
+            q.x = 0.25 * s;
+            q.y = (y_axis.x + x_axis.y) / s;
+            q.z = (z_axis.x + x_axis.z) / s;
+        }
+        else if (y_axis.y > z_axis.z) {
+            double s = 2.0 * std::sqrt(1.0 + y_axis.y - x_axis.x - z_axis.z);
+            q.w = (z_axis.x - x_axis.z) / s;
+            q.x = (y_axis.x + x_axis.y) / s;
+            q.y = 0.25 * s;
+            q.z = (z_axis.y + y_axis.z) / s;
+        }
+        else {
+            double s = 2.0 * std::sqrt(1.0 + z_axis.z - x_axis.x - y_axis.y);
+            q.w = (x_axis.y - y_axis.x) / s;
+            q.x = (z_axis.x + x_axis.z) / s;
+            q.y = (z_axis.y + y_axis.z) / s;
+            q.z = 0.25 * s;
+        }
+    }
+
+    return q.normalized();
+}
+
+
+void matrix4x4::orthonormalize_basis() {
+    vector3 x_axis(m[0][0], m[1][0], m[2][0]);
+    vector3 y_axis(m[0][1], m[1][1], m[2][1]);
+    vector3 z_axis(m[0][2], m[1][2], m[2][2]);
+
+    x_axis = x_axis.normalized();
+    y_axis = (y_axis - x_axis * x_axis.dot(y_axis)).normalized();
+    z_axis = x_axis.cross(y_axis);  
+
+    m[0][0] = static_cast<float>(x_axis.x);
+    m[1][0] = static_cast<float>(x_axis.y);
+    m[2][0] = static_cast<float>(x_axis.z);
+
+    m[0][1] = static_cast<float>(y_axis.x);
+    m[1][1] = static_cast<float>(y_axis.y);
+    m[2][1] = static_cast<float>(y_axis.z);
+
+    m[0][2] = static_cast<float>(z_axis.x);
+    m[1][2] = static_cast<float>(z_axis.y);
+    m[2][2] = static_cast<float>(z_axis.z);
+}

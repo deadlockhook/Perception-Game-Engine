@@ -165,14 +165,8 @@ public:
         if (!m_buffer.data())
 			return nullptr;
 
-        __try {
-    
-            ((char*)m_buffer.data())[m_length] = '\0';
-            return (const char*)m_buffer.data();
-        }
-		__except (EXCEPTION_EXECUTE_HANDLER) {
-			return nullptr;
-		}
+       ((char*)m_buffer.data())[m_length] = '\0';
+       return (const char*)m_buffer.data();
     }
 
     int compare(const char* str) const {

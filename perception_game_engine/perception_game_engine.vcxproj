@@ -139,11 +139,16 @@
     <ClCompile Include="crt\s_string.cpp" />
     <ClCompile Include="crt\s_string_pool.cpp" />
     <ClCompile Include="engine\entity_system\component.cpp" />
+    <ClCompile Include="engine\entity_system\ecs_execute.cpp" />
     <ClCompile Include="engine\entity_system\entity.cpp" />
     <ClCompile Include="engine\entity_system\entity_layer.cpp" />
     <ClCompile Include="engine\entity_system\entity_manager.cpp" />
+    <ClCompile Include="engine\entity_system\level.cpp" />
+    <ClCompile Include="engine\global_vars.cpp" />
     <ClCompile Include="engine\hwnd\window_manager.cpp" />
+    <ClCompile Include="engine\setup.cpp" />
     <ClCompile Include="engine\threading\thread_storage.cpp" />
+    <ClCompile Include="engine\threading\thread_system.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="exception\fail.cpp" />
     <ClCompile Include="exception\exception_handler.cpp" />
@@ -176,13 +181,17 @@
     <ClInclude Include="crt\atomic.h" />
     <ClInclude Include="crt\inline_crt.h" />
     <ClInclude Include="crt\s_map.h" />
-    <ClInclude Include="crt\s_node_list.h" />
+    <ClInclude Include="crt\s_performance_vector.h" />
     <ClInclude Include="crt\s_string_pool.h" />
     <ClInclude Include="engine\component_system\comp_transform.h" />
+    <ClInclude Include="engine\component_system\physics_asset.h" />
     <ClInclude Include="engine\entity_system\entity_system.h" />
+    <ClInclude Include="engine\global_vars.h" />
     <ClInclude Include="engine\hwnd\window_manager.h" />
     <ClInclude Include="engine\render\render_device.h" />
+    <ClInclude Include="engine\setup.h" />
     <ClInclude Include="engine\threading\thread_storage.h" />
+    <ClInclude Include="engine\threading\thread_system.h" />
     <ClInclude Include="exception\fail.h" />
     <ClInclude Include="crt\s_vector.h" />
     <ClInclude Include="definitions.h" />
@@ -208,6 +217,7 @@
     <ClInclude Include="memory\mem.h" />
     <ClInclude Include="crt\safe_crt.h" />
     <ClInclude Include="crt\s_string.h" />
+    <ClInclude Include="platform\platform.h" />
     <ClInclude Include="serialize\fnva_hash.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

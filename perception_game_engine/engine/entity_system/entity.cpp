@@ -1,30 +1,28 @@
 #include "entity_system.h"
 #include "../threading/thread_storage.h"
 #include "../../crt/s_string_pool.h"
-#include "../../crt/s_node_list.h"
 
 void entity_t::destroy()
 {
 	detach();
 	auto ts = get_current_thread_storage();
 	ts->current_layer = owner_layer;
+	ts->current_entity = this;
 
-	__try {
-		ts->current_entity = this;
+	const size_t component_count = components.size();
+	for (size_t i = 0; i < component_count; ++i)
+	{
+		if (!components.is_alive(i))
+			continue;
 
-		for (auto* n = components.begin(); n != components.end(); n = n->next)
-			n->value.destroy();
-
-		if (on_destroy)
-			on_destroy(_class);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER) {
-		on_fail("Entity destructor failed! %s", name.c_str()); 
+		components[i].destroy();
 	}
 
-	components.clear(); 
+	if (on_destroy)
+		on_destroy(this, _class);
+
+	components.clear();
 }
-
 
 bool entity_t::construct(entity_layer_t* o,
 	const s_string& n,
@@ -59,49 +57,63 @@ bool entity_t::construct(entity_layer_t* o,
 	on_debug_draw = _on_debug_draw;
 	on_ui_inspector = _on_ui_inspector;
 
-	__try {
-		auto ts = get_current_thread_storage();
-		ts->current_layer = owner_layer;
-		ts->current_entity = this;
-		if (on_create)
-			_class = on_create(user_data);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER) {
-		on_fail("Entity constructor failed: %s", name.c_str());
-		_class = nullptr;
-		return false;
-	}
+	auto ts = get_current_thread_storage();
+	ts->current_layer = owner_layer;
+	ts->current_entity = this;
+	if (on_create)
+		_class = on_create(this,user_data);
 
 	return true;
 }
 
-void entity_t::attach_to(entity_t* e) {
-
+void entity_t::attach_to(entity_t* e)
+{
 	if (!e || e == this || parent == e)
 		return;
 
-	for (auto* n = children.begin(); n != children.end(); n = n->next) {
-		if (n->value == e) {
-			children.remove_node(n);
+	const size_t child_count = children.size();
+	for (size_t i = 0; i < child_count; ++i)
+	{
+		if (!children.is_alive(i))
+			continue;
+
+		if (children[i] == e)
+		{
+			children.remove(i);
 			e->parent = nullptr;
 			break;
 		}
 	}
 
-	if (parent) {
+	if (parent)
+	{
 		auto& siblings = parent->children;
-		for (auto* n = siblings.begin(); n != siblings.end(); n = n->next) {
-			if (n->value == this) {
-				siblings.remove_node(n);
+		const size_t sibling_count = siblings.size();
+
+		for (size_t i = 0; i < sibling_count; ++i)
+		{
+			if (!siblings.is_alive(i))
+				continue;
+
+			if (siblings[i] == this)
+			{
+				siblings.remove(i);
 				break;
 			}
 		}
+
 		parent = nullptr;
 	}
 
-	for (auto* n = e->children.begin(); n != e->children.end(); n = n->next) {
-		if (n->value == this) {
-			e->children.remove_node(n);
+	const size_t e_child_count = e->children.size();
+	for (size_t i = 0; i < e_child_count; ++i)
+	{
+		if (!e->children.is_alive(i))
+			continue;
+
+		if (e->children[i] == this)
+		{
+			e->children.remove(i);
 			break;
 		}
 	}
@@ -111,15 +123,25 @@ void entity_t::attach_to(entity_t* e) {
 }
 
 
-void entity_t::detach() {
-	if (parent) {
+void entity_t::detach()
+{
+	if (parent)
+	{
 		auto& siblings = parent->children;
-		for (auto* n = siblings.begin(); n != siblings.end(); n = n->next) {
-			if (n->value == this) {
-				siblings.remove_node(n);
+		const size_t sibling_count = siblings.size();
+
+		for (size_t i = 0; i < sibling_count; ++i)
+		{
+			if (!siblings.is_alive(i))
+				continue;
+
+			if (siblings[i] == this)
+			{
+				siblings.remove(i);
 				break;
 			}
 		}
+
 		parent = nullptr;
 	}
 }
@@ -133,9 +155,19 @@ entity_t* entity_t::get_root() {
 	return current;
 }
 
-void entity_t::for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata) {
-	FOR_EACH_NODE(children, child) {
+
+void entity_t::for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata)
+{
+	const size_t count = children.size();
+
+	for (size_t i = 0; i < count; ++i)
+	{
+		if (!children.is_alive(i))
+			continue;
+
+		entity_t* child = children[i];
 		fn(storage, child, userdata);
+
 		child->for_each_child_recursive(storage, fn, userdata);
 	}
 }

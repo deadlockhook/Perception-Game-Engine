@@ -1,13 +1,13 @@
 #pragma once
 #include "s_string.h"
-#include "s_node_list.h"
 #include "atomic.h"
 #include "../serialize/fnva_hash.h"
+#include "s_performance_vector.h"
 
 struct pooled_string_t
 {
-	pooled_string_t() = default;
-	~pooled_string_t() = default;
+    pooled_string_t() = default;
+    ~pooled_string_t() = default;
 
     pooled_string_t(const s_string& s) {
         str = s;
@@ -15,8 +15,7 @@ struct pooled_string_t
     }
 
     s_string str;
-	uint32_t hash = 0;
-
+    uint32_t hash = 0;
 };
 
 class string_pool_t {
@@ -28,12 +27,17 @@ public:
         uint32_t hash = fnv1a32(str);
         unique_lock<critical_section> lock(&mutex);
 
-        FOR_EACH_NODE(pool, existing) {
-            if (existing.hash == hash)
-                return existing.str;
+        const size_t count = pool.size();
+        for (size_t i = 0; i < count; ++i) {
+            if (!pool.is_alive(i))
+                continue;
+
+            if (pool[i].hash == hash)
+                return pool[i].str;
         }
 
-        return pool.push_back_ref(s_string(str)).str;
+        pooled_string_t* new_entry = pool.push_back(pooled_string_t(s_string(str)));
+        return new_entry->str;
     }
 
     const s_string& intern(const s_string& str) {
@@ -42,17 +46,26 @@ public:
 
     bool contains(const s_string& str) const {
         uint32_t hash = fnv1a32(str.c_str());
-        FOR_EACH_NODE(pool, existing) {
-            if (existing.hash == hash)
+
+        const size_t count = pool.size();
+        for (size_t i = 0; i < count; ++i) {
+            if (!pool.is_alive(i))
+                continue;
+
+            if (pool[i].hash == hash)
                 return true;
         }
         return false;
     }
 
     const s_string* get_name_by_hash(uint32_t hash) const {
-        FOR_EACH_NODE(pool, existing) {
-            if (existing.hash == hash)
-                return &existing.str;
+        const size_t count = pool.size();
+        for (size_t i = 0; i < count; ++i) {
+            if (!pool.is_alive(i))
+                continue;
+
+            if (pool[i].hash == hash)
+                return &pool[i].str;
         }
         return nullptr;
     }
@@ -65,10 +78,9 @@ public:
     size_t size() const { return pool.size(); }
 
 private:
-    s_node_list_t<pooled_string_t> pool;
+    s_performance_vector<pooled_string_t> pool;
     critical_section mutex;
 };
-
 
 extern string_pool_t g_string_pool;
 
@@ -80,14 +92,12 @@ inline const s_string& intern_string(const s_string& str) {
     return g_string_pool.intern(str);
 }
 
-
 struct s_pooled_string {
     s_string* str = nullptr;
     uint32_t hash = 0;
 
-	s_pooled_string() = default;
+    s_pooled_string() = default;
     ~s_pooled_string() = default;
-
 
     s_pooled_string(const char* raw) {
         hash = fnv1a32(raw);

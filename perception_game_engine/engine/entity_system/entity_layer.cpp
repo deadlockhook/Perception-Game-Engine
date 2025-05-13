@@ -1,6 +1,5 @@
 #include "entity_system.h"
 #include "../threading/thread_storage.h"
-#include "../../crt/s_node_list.h"
 
 void entity_layer_t::init_layer(const s_string& n)
 {
@@ -35,34 +34,50 @@ entity_t* entity_layer_t::create_entity(
 
 entity_t* entity_layer_t::get_entity_by_class(class_t* class_ptr)
 {
-	for (auto* n = entities.begin(); n != entities.end(); n = n->next) {
-		if (n->value._class == class_ptr)
-			return &n->value;
+	const size_t count = entities.size();
+	for (size_t i = 0; i < count; ++i)
+	{
+		if (!entities.is_alive(i))
+			continue;
+
+		if (entities[i]._class == class_ptr)
+			return &entities[i];
 	}
 	return nullptr;
 }
+
 
 entity_t* entity_layer_t::get_entity_by_name(const s_string& name)
 {
-	uint32_t hash = fnv1a32(name.c_str());
-	for (auto* n = entities.begin(); n != entities.end(); n = n->next) {
-		if (n->value.lookup_hash_by_name == hash)
-			return &n->value;
+	const uint32_t hash = fnv1a32(name.c_str());
+	const size_t count = entities.size();
+
+	for (size_t i = 0; i < count; ++i)
+	{
+		if (!entities.is_alive(i))
+			continue;
+
+		if (entities[i].lookup_hash_by_name == hash)
+			return &entities[i];
 	}
 	return nullptr;
 }
 
+
 bool entity_layer_t::remove_entity_by_class(class_t* class_ptr)
 {
-	auto* node = entities.begin();
-	while (node) {
-		auto* next = node->next;
-		if (node->value._class == class_ptr) {
-			node->value.destroy();
-			entities.remove_node(node);
+	const size_t count = entities.size();
+	for (size_t i = 0; i < count; ++i)
+	{
+		if (!entities.is_alive(i))
+			continue;
+
+		if (entities[i]._class == class_ptr)
+		{
+			entities[i].destroy();
+			entities.remove(i);
 			return true;
 		}
-		node = next;
 	}
 	return false;
 }
@@ -72,13 +87,16 @@ void entity_layer_t::destroy()
 	auto ts = get_current_thread_storage();
 	ts->current_layer = this;
 
-	auto* node = entities.begin();
-	while (node) {
-		auto* next = node->next;
-		ts->current_entity = &node->value;
-		node->value.destroy();
-		node = next;
+	const size_t count = entities.size();
+	for (size_t i = 0; i < count; ++i)
+	{
+		if (!entities.is_alive(i))
+			continue;
+
+		ts->current_entity = &entities[i];
+		entities[i].destroy();
 	}
 
 	entities.clear();
 }
+

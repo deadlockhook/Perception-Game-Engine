@@ -146,23 +146,72 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 }
 
 
-void entity_manager::on_frame()
+void entity_manager::on_frame_start()
 {
 	process<void>(nullptr,
 		[](entity_t* e, component_t* comp, void*)
 		{
-			if (comp->on_frame)
-				comp->on_frame(e, comp->_class);
+			if (comp->on_frame_start)
+				comp->on_frame_start(e, comp->_class);
 			
 		},
 		[](entity_t* e, void*)
 		{
-			if (e->on_frame)
-				e->on_frame(e, e->_class); 
+			if (e->on_frame_start)
+				e->on_frame_start(e, e->_class);
 		}
 	);
 }
 
+void entity_manager::on_frame_update()
+{
+	process<void>(nullptr,
+		[](entity_t* e, component_t* comp, void*)
+		{
+			if (comp->on_frame_update)
+				comp->on_frame_update(e, comp->_class);
+
+		},
+		[](entity_t* e, void*)
+		{
+			if (e->on_frame_update)
+				e->on_frame_update(e, e->_class);
+		}
+	);
+}
+
+void entity_manager::on_frame_end()
+{
+	process<void>(nullptr,
+		[](entity_t* e, component_t* comp, void*)
+		{
+			if (comp->on_frame_end)
+				comp->on_frame_end(e, comp->_class);
+
+		},
+		[](entity_t* e, void*)
+		{
+			if (e->on_frame_end)
+				e->on_frame_end(e, e->_class);
+		}
+	);
+}
+
+void entity_manager::on_physics_start()
+{
+	process<void>(nullptr,
+		[](entity_t* e, component_t* comp, void*)
+		{
+			if (comp->on_physics_start)
+				comp->on_physics_start(e, comp->_class);
+		},
+		[](entity_t* e, void*)
+		{
+			if (e->on_physics_start)
+				e->on_physics_start(e, e->_class);
+		}
+	);
+}
 
 void entity_manager::on_physics_update()
 {
@@ -176,6 +225,22 @@ void entity_manager::on_physics_update()
 		{
 			if (e->on_physics_update)
 				e->on_physics_update(e, e->_class);
+		}
+	);
+}
+
+void entity_manager::on_physics_end()
+{
+	process<void>(nullptr,
+		[](entity_t* e, component_t* comp, void*)
+		{
+			if (comp->on_physics_end)
+				comp->on_physics_end(e, comp->_class);
+		},
+		[](entity_t* e, void*)
+		{
+			if (e->on_physics_end)
+				e->on_physics_end(e, e->_class);
 		}
 	);
 }
@@ -327,7 +392,7 @@ public:
 
 test_component test;
 
-class_t* on_create_test(entity_t* e, user_data_t* data)
+class_t* on_create_test(entity_t* e)
 {
 	return (class_t*)&test;
 }
@@ -338,24 +403,10 @@ void entity_manager::execute_start()
 
 	auto layer = level->create_layer("Test Layer");
 
-	for (int test_entity_index = 0; test_entity_index < 100000; ++test_entity_index) {
-	     auto entity = layer->create_entity("Test Entity");
-		 entity->add_component("test", on_create_test);
-		 entity->add_component("test2", on_create_test);
-		 entity->add_component("test3", on_create_test);
-		 entity->add_component("test4", on_create_test);
-		 entity->add_component("test5", on_create_test);
-		 entity->add_component("test6", on_create_test);
-		 entity->add_component("test7", on_create_test);
-		 entity->add_component("test8", on_create_test);
-		 entity->add_component("test9", on_create_test);
-		 entity->add_component("test10", on_create_test);
-		 //entity->add_component("test2", on_create_test);
-		 //entity->add_component("test3", on_create_test);
-	}
+	auto transform_entity = layer->create_entity("transform_entity");
 
-	std::cout << " count " << layer->entities.size() << "\n";
+	auto transform = transform_entity->add_transform_component(vector3(0.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
 
 	t_on_frame.create(execute_on_frame, nullptr);
-	//t_on_physics_update.create(execute_on_physics_update, nullptr);
+	t_on_physics_update.create(execute_on_physics_update, nullptr);
 }

@@ -16,8 +16,9 @@ DWORD WINAPI execute_on_physics_update(LPVOID param)
 
     while (true)
     {
-
+        g_entity_mgr.on_physics_start();
         g_entity_mgr.on_physics_update();
+        g_entity_mgr.on_physics_end();
 
         while (true)
         {
@@ -56,7 +57,9 @@ DWORD WINAPI execute_on_frame(LPVOID param)
 
     while (true)
     {
-        g_entity_mgr.on_frame();
+        g_entity_mgr.on_frame_start();
+        g_entity_mgr.on_frame_update();
+        g_entity_mgr.on_frame_end();
 
         current_time = p_query_counter();
         double elapsed_ms = (current_time - start_time) * 1000.0 / static_cast<double>(frequency);
@@ -68,7 +71,7 @@ DWORD WINAPI execute_on_frame(LPVOID param)
 
         g_vars.engine.frame_update.current_hz = 1000.0 / elapsed_ms;
 
-        std::cout << "fps " << g_vars.engine.frame_update.current_hz << std::endl;
+      //  std::cout << "fps " << g_vars.engine.frame_update.current_hz << std::endl;
 
         start_time = p_query_counter();
     }

@@ -138,6 +138,7 @@
     <ClCompile Include="crt\safe_crt.cpp" />
     <ClCompile Include="crt\s_string.cpp" />
     <ClCompile Include="crt\s_string_pool.cpp" />
+    <ClCompile Include="engine\component_system\transform_instance.cpp" />
     <ClCompile Include="engine\entity_system\component.cpp" />
     <ClCompile Include="engine\entity_system\ecs_execute.cpp" />
     <ClCompile Include="engine\entity_system\entity.cpp" />
@@ -181,9 +182,12 @@
     <ClInclude Include="crt\atomic.h" />
     <ClInclude Include="crt\inline_crt.h" />
     <ClInclude Include="crt\s_map.h" />
+    <ClInclude Include="crt\s_performance_map.h" />
     <ClInclude Include="crt\s_performance_vector.h" />
     <ClInclude Include="crt\s_string_pool.h" />
-    <ClInclude Include="engine\component_system\comp_transform.h" />
+    <ClInclude Include="crt\triple_buffer.h" />
+    <ClInclude Include="engine\component_system\default_component_hashes.h" />
+    <ClInclude Include="engine\component_system\transform_instance.h" />
     <ClInclude Include="engine\component_system\physics_asset.h" />
     <ClInclude Include="engine\entity_system\entity_system.h" />
     <ClInclude Include="engine\global_vars.h" />

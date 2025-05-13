@@ -7,9 +7,10 @@
 #include "../../crt/s_string_pool.h"
 #include "../../crt/s_performance_vector.h"
 #include "../threading/thread_system.h"
+#include "../../math/vector3.h"
+#include "../../math/quat.h"
 
 using class_t = void*;
-using user_data_t = void*;
 
 class serializer_t;
 class deserializer_t;
@@ -21,7 +22,7 @@ class entity_layer_t;
 class component_t;
 typedef void(*entity_iter_fn_t)(struct thread_storage_t* storage, entity_t* child, void* userdata);
 
-using construct_fn_t = class_t * (*)(entity_t*, user_data_t*);
+using construct_fn_t = class_t * (*)(entity_t*);
 using destruct_fn_t = void(*)(entity_t*, class_t*);
 
 using on_input_receive_fn_t = void(*)(entity_t*, class_t*, input_context_t*);
@@ -37,17 +38,37 @@ using on_deserialize_fn_t = void(*)(entity_t*, class_t*, deserializer_t*);
 using on_debug_draw_fn_t = void(*)(entity_t*, class_t*, render_context_t*);
 using on_ui_inspector_fn_t = void(*)(entity_t*, class_t*, render_context_t*);
 
+
+//components
+struct transform_instance_t;
+struct physics_asset_t;
+
+using component_callback_fn = void(*)(entity_t*, class_t*, void* ctx);
+
+struct component_callback_t
+{
+	component_callback_fn callback;
+	void* ctx;
+};
+
 class component_callbacks_t
 {
 public:
 	component_callbacks_t() = default;
 public:
-	construct_fn_t on_create; //construction function
-	destruct_fn_t on_destroy; //destruction function
+
+	construct_fn_t on_construct; //construction function
+	destruct_fn_t on_destruct; //destruction function
 
 	on_input_receive_fn_t on_input_receive; //input receive function
-	on_physics_update_fn_t on_physics_update; //physics update function
-	on_frame_fn_t on_frame; //frame function
+
+	on_physics_update_fn_t on_physics_start; 
+	on_physics_update_fn_t on_physics_update; 
+	on_physics_update_fn_t on_physics_end; 
+
+	on_frame_fn_t on_frame_start; //frame function
+	on_frame_fn_t on_frame_update; //frame function
+	on_frame_fn_t on_frame_end; //frame function
 
 	on_render_fn_t on_render; //render function
 	on_render_ui_fn_t on_render_ui; //render ui function
@@ -58,6 +79,25 @@ public:
 	on_debug_draw_fn_t on_debug_draw; //debug draw function
 
 	on_ui_inspector_fn_t on_ui_inspector; //editor inspector panel
+
+	void set_construct_callback(construct_fn_t fn) { on_construct = fn; }
+	void set_destruct_callback(destruct_fn_t fn) { on_destruct = fn; }
+	void set_input_callback(on_input_receive_fn_t fn) { on_input_receive = fn; }
+
+	void set_physics_start_callback(on_physics_update_fn_t fn) { on_physics_start = fn; }
+	void set_physics_update_callback(on_physics_update_fn_t fn) { on_physics_update = fn; }
+	void set_physics_end_callback(on_physics_update_fn_t fn) { on_physics_end = fn; }
+
+	void set_frame_start_callback(on_frame_fn_t fn) { on_frame_start = fn; }
+	void set_frame_update_callback(on_frame_fn_t fn) { on_frame_update = fn; }
+	void set_frame_end_callback(on_frame_fn_t fn) { on_frame_end = fn; }
+
+	void set_render_callback(on_render_fn_t fn) { on_render = fn; }
+	void set_render_ui_callback(on_render_ui_fn_t fn) { on_render_ui = fn; }
+	void set_serialize_callback(on_serialize_fn_t fn) { on_serialize = fn; }
+	void set_deserialize_callback(on_deserialize_fn_t fn) { on_deserialize = fn; }
+	void set_debug_draw_callback(on_debug_draw_fn_t fn) { on_debug_draw = fn; }
+	void set_ui_inspector_callback(on_ui_inspector_fn_t fn) { on_ui_inspector = fn; }
 };
 
 struct identifier_t
@@ -71,25 +111,12 @@ class component_t : public component_callbacks_t, public identifier_t
 public:
 	bool construct(
 		entity_t* owner,
-		const s_string& n,
-		construct_fn_t _on_create,
-		destruct_fn_t _on_destroy,
-		on_input_receive_fn_t _on_input_receive,
-		on_physics_update_fn_t _on_physics_update,
-		on_frame_fn_t _on_frame,
-		on_render_fn_t _on_render,
-		on_render_ui_fn_t _on_render_ui,
-		on_serialize_fn_t _on_serialize,
-		on_deserialize_fn_t _on_deserialize,
-		on_debug_draw_fn_t _on_debug_draw,
-		on_ui_inspector_fn_t _on_ui_inspector,
-		user_data_t* data
+		const s_string& n, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
 	void destroy();
 public:
 	entity_t* owner = nullptr;
 	class_t* _class = nullptr;
-	user_data_t* user_data = nullptr;
 };
 
 class entity_t : public component_callbacks_t, public identifier_t {
@@ -101,26 +128,14 @@ public:
 
 	bool construct(
 		entity_layer_t* owner,
-		const s_string& n,
-		construct_fn_t _on_create,
-		destruct_fn_t _on_destroy,
-		on_input_receive_fn_t _on_input_receive,
-		on_physics_update_fn_t _on_physics_update,
-		on_frame_fn_t _on_frame,
-		on_render_fn_t _on_render,
-		on_render_ui_fn_t _on_render_ui,
-		on_serialize_fn_t _on_serialize,
-		on_deserialize_fn_t _on_deserialize,
-		on_debug_draw_fn_t _on_debug_draw,
-		on_ui_inspector_fn_t _on_ui_inspector,
-		user_data_t* data
+		const s_string& n, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
 
 	void attach_to(entity_t* e);
 	void detach();
 	entity_t* get_root();
 	void for_each_child_recursive(thread_storage_t* storage, entity_iter_fn_t fn, void* userdata);
-	
+
 	template <typename fn_t>
 	void for_each_child_recursive(thread_storage_t* storage, fn_t&& fn, void* userdata)
 	{
@@ -138,36 +153,33 @@ public:
 		}
 	}
 
-
-	bool add_component(
-		const s_string& name,
-		construct_fn_t on_create = nullptr,
-		destruct_fn_t on_destroy = nullptr,
-		on_input_receive_fn_t on_input_receive = nullptr,
-		on_physics_update_fn_t on_physics_update = nullptr,
-		on_frame_fn_t on_frame = nullptr,
-		on_render_fn_t on_render = nullptr,
-		on_render_ui_fn_t on_render_ui = nullptr,
-		on_serialize_fn_t on_serialize = nullptr,
-		on_deserialize_fn_t on_deserialize = nullptr,
-		on_debug_draw_fn_t on_debug_draw = nullptr,
-		on_ui_inspector_fn_t on_ui_inspector = nullptr,
-		user_data_t* data = nullptr
+	component_t* add_component(
+		const s_string& name, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
 
-	bool remove_component(const s_string& name);
+	transform_instance_t* add_transform_component(const vector3& position = vector3(0.0f, 0.0f, 0.0f), const quat& rotation = quat::identity(),
+		const vector3& scale = vector3(1.0f, 1.0f, 1.0f));
 
-	component_t* get_component(const s_string& name);
+	bool remove_component(const s_string& name);
+	bool remove_component(uint32_t hash);
 
 	template<typename T>
-	T* get_component_class(const s_string& name) {
-		auto* c = get_component(name);
-		return c ? reinterpret_cast<T*>(c->_class) : nullptr;
+	T* get_component(uint32_t hash)
+	{
+		const size_t count = components.size();
+		for (size_t i = 0; i < count; ++i)
+		{
+			if (!components.is_alive(i))
+				continue;
+
+			if (components[i].lookup_hash_by_name == hash)
+				return reinterpret_cast<T*>(components[i]._class);
+		}
+
+		return nullptr;
 	}
 public:
 	class_t* _class = nullptr; //passed onto callbacks
-	user_data_t* user_data = nullptr; //passed onto callbacks
-public:
 	entity_t* parent = nullptr; //parent entity
 	entity_layer_t* owner_layer = nullptr; //layer pointer
 	s_performance_vector<entity_t*> children;
@@ -183,28 +195,18 @@ public:
 	void init_layer(const s_string& n);
 
 	entity_t* create_entity(
-		const s_string& name,
-		construct_fn_t on_create = nullptr,
-		destruct_fn_t on_destroy = nullptr,
-		on_input_receive_fn_t on_input_receive = nullptr,
-		on_physics_update_fn_t on_physics_update = nullptr,
-		on_frame_fn_t on_frame = nullptr,
-		on_render_fn_t on_render = nullptr,
-		on_render_ui_fn_t on_render_ui = nullptr,
-		on_serialize_fn_t on_serialize = nullptr,
-		on_deserialize_fn_t on_deserialize = nullptr,
-		on_debug_draw_fn_t on_debug_draw = nullptr,
-		on_ui_inspector_fn_t on_ui_inspector = nullptr,
-		user_data_t* data = nullptr
+		const s_string& name, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
 	entity_t* get_entity_by_class(class_t* class_ptr);
 	entity_t* get_entity_by_name(const s_string& name);
 	bool remove_entity_by_class(class_t* class_ptr);
+
+	s_performance_vector<component_t*>& get_components_by_hash(uint32_t hash) { return map_components[hash]; }
+
 	void destroy();
 public:
 	s_performance_vector<entity_t> entities;
-	//map with name hashes for quick lookup
-
+	s_map<uint32_t, s_performance_vector<component_t*>> map_components;
 };
 
 class level_t : public identifier_t
@@ -251,8 +253,15 @@ public:
 	template <typename context_t, typename component_callback, typename entity_callback>
 	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
 
-	void on_frame();
+	void on_physics_start();
 	void on_physics_update();
+	void on_physics_end();
+
+	void on_frame_start();
+	void on_frame_update();
+	void on_frame_end();
+
+
 	void on_input_receive(input_context_t* ctx);
 	void on_render(render_context_t* ctx);
 	void on_render_ui(render_context_t* ctx);
@@ -275,5 +284,5 @@ public:
 
 extern entity_manager g_entity_mgr;
 
-DWORD WINAPI execute_on_physics_update(LPVOID param); 
-DWORD WINAPI execute_on_frame(LPVOID param); 
+DWORD WINAPI execute_on_physics_update(LPVOID param);
+DWORD WINAPI execute_on_frame(LPVOID param);

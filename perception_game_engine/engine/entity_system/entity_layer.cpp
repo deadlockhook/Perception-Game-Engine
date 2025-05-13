@@ -8,23 +8,11 @@ void entity_layer_t::init_layer(const s_string& n)
 }
 
 entity_t* entity_layer_t::create_entity(
-	const s_string& name,
-	construct_fn_t on_create,
-	destruct_fn_t on_destroy,
-	on_input_receive_fn_t on_input_receive,
-	on_physics_update_fn_t on_physics_update,
-	on_frame_fn_t on_frame,
-	on_render_fn_t on_render,
-	on_render_ui_fn_t on_render_ui,
-	on_serialize_fn_t on_serialize,
-	on_deserialize_fn_t on_deserialize,
-	on_debug_draw_fn_t on_debug_draw,
-	on_ui_inspector_fn_t on_ui_inspector,
-	user_data_t* data
+	const s_string& name, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn
 )
 {
 	entity_t entity;
-	if (entity.construct(this, name, on_create, on_destroy, on_input_receive, on_physics_update, on_frame, on_render, on_render_ui, on_serialize, on_deserialize, on_debug_draw, on_ui_inspector, data)) {
+	if (entity.construct(this, name, construct_fn, deconstruct_fn)) {
 		return entities.push_back(entity);
 	}
 	on_fail("Failed to create entity: %s", name.c_str());

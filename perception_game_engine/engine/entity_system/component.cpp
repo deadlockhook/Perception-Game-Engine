@@ -1,5 +1,7 @@
 #include "entity_system.h"
 #include "../threading/thread_storage.h"
+#include "../component_system/transform_instance.h"
+#include "../component_system/physics_asset.h"
 
 void component_t::destroy()
 {
@@ -8,69 +10,34 @@ void component_t::destroy()
 	ts->current_entity = owner;
 	ts->current_component = this;
 
-	if (on_destroy)
-		on_destroy(owner,_class);
+	if (on_destruct)
+		on_destruct(owner,_class);
 }
 
 bool component_t::construct(
 	entity_t* _owner,
-	const s_string& n,
-	construct_fn_t _on_create,
-	destruct_fn_t _on_destroy,
-	on_input_receive_fn_t _on_input_receive,
-	on_physics_update_fn_t _on_physics_update,
-	on_frame_fn_t _on_frame,
-	on_render_fn_t _on_render,
-	on_render_ui_fn_t _on_render_ui,
-	on_serialize_fn_t _on_serialize,
-	on_deserialize_fn_t _on_deserialize,
-	on_debug_draw_fn_t _on_debug_draw,
-	on_ui_inspector_fn_t _on_ui_inspector,
-	user_data_t* data
+	const s_string& n, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn
 )
 {
 	owner = _owner;
 	name = s_pooled_string(n);
 	lookup_hash_by_name = name.hash;
 
-	user_data = data;
-
-	on_create = _on_create;
-	on_destroy = _on_destroy;
-	on_input_receive = _on_input_receive;
-	on_physics_update = _on_physics_update;
-	on_frame = _on_frame;
-	on_render = _on_render;
-	on_render_ui = _on_render_ui;
-	on_serialize = _on_serialize;
-	on_deserialize = _on_deserialize;
-	on_debug_draw = _on_debug_draw;
-	on_ui_inspector = _on_ui_inspector;
-
 	auto ts = get_current_thread_storage();
 	ts->current_layer = owner->owner_layer;
 	ts->current_entity = owner;
 
-	if (on_create)
-		_class = on_create(owner, user_data);
+	on_construct = construct_fn;
+	on_destruct = deconstruct_fn;
+
+	if (on_construct)
+		_class = on_construct(owner);
 
 	return _class != nullptr;
 }
 
-bool entity_t::add_component(
-	const s_string& name,
-	construct_fn_t on_create,
-	destruct_fn_t on_destroy,
-	on_input_receive_fn_t on_input_receive,
-	on_physics_update_fn_t on_physics_update,
-	on_frame_fn_t on_frame,
-	on_render_fn_t on_render,
-	on_render_ui_fn_t on_render_ui,
-	on_serialize_fn_t on_serialize,
-	on_deserialize_fn_t on_deserialize,
-	on_debug_draw_fn_t on_debug_draw,
-	on_ui_inspector_fn_t on_ui_inspector,
-	user_data_t* data)
+component_t* entity_t::add_component(
+	const s_string& name, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn)
 {
 	auto string_hash = fnv1a32(name.c_str());
 
@@ -83,43 +50,25 @@ bool entity_t::add_component(
 		if (components[i].lookup_hash_by_name == string_hash)
 		{
 			on_fail("Failed to create component, already exists ", name.c_str());
-			return false;
+			return nullptr;
 		}
 	}
 
 	component_t component;
-	if (component.construct(this, name, on_create, on_destroy, on_input_receive, on_physics_update, on_frame, on_render, on_render_ui, on_serialize, on_deserialize, on_debug_draw, on_ui_inspector, data))
+	if (component.construct(this, name, construct_fn, deconstruct_fn))
 	{
-		components.push_back(component);
-		return true;
+		auto comp = components.push_back(component);
+		owner_layer->map_components[string_hash].push_back(comp);
+		return comp;
 	}
 
 	on_fail("Failed to create component: ", name.c_str());
-	return false;
-}
-
-component_t* entity_t::get_component(const s_string& name)
-{
-	uint32_t hash = fnv1a32(name.c_str());
-
-	const size_t count = components.size();
-	for (size_t i = 0; i < count; ++i)
-	{
-		if (!components.is_alive(i))
-			continue;
-
-		if (components[i].lookup_hash_by_name == hash)
-			return &components[i];
-	}
-
 	return nullptr;
 }
 
 
-bool entity_t::remove_component(const s_string& name)
+bool entity_t::remove_component(uint32_t string_hash)
 {
-	auto string_hash = fnv1a32(name.c_str());
-
 	const size_t count = components.size();
 	for (size_t i = 0; i < count; ++i)
 	{
@@ -128,6 +77,21 @@ bool entity_t::remove_component(const s_string& name)
 
 		if (components[i].lookup_hash_by_name == string_hash)
 		{
+			auto& hash_map = owner_layer->map_components[string_hash];
+
+			const size_t has_compcount = hash_map.size();
+			for (size_t j = 0; j < has_compcount; ++j)
+			{
+				if (!hash_map.is_alive(j))
+					continue;
+
+				if (hash_map[i] == &components[i])
+				{
+					hash_map.remove(j);
+					break;
+				}
+			}
+
 			components[i].destroy();
 			components.remove(i);
 			return true;
@@ -136,4 +100,25 @@ bool entity_t::remove_component(const s_string& name)
 
 	on_fail("Failed to remove component: %s", name.c_str());
 	return false;
+}
+bool entity_t::remove_component(const s_string& name)
+{
+	return remove_component(fnv1a32(name.c_str()));
+}
+
+transform_instance_t* entity_t::add_transform_component(const vector3& position, const quat& rotation,
+	const vector3& scale )
+{
+	auto transform = add_component(transform_instance_t_register, transform_instance_t::create_transform, transform_instance_t::destroy_transform);
+	
+	if (!transform)
+		return nullptr;
+
+	transform->set_physics_update_callback(transform_instance_t::on_physics_update);
+	transform->set_frame_callback(transform_instance_t::on_frame_update);
+
+	auto transform_instance = reinterpret_cast<transform_instance_t*>(transform->_class);
+	transform_instance->set_local_transform(transform_t(position, rotation, scale));
+
+	return transform_instance;
 }

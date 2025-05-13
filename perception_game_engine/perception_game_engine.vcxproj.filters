@@ -135,6 +135,9 @@
     <ClCompile Include="engine\entity_system\level.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="engine\component_system\transform_instance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="definitions.h">
@@ -242,7 +245,7 @@
     <ClInclude Include="math\transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="engine\component_system\comp_transform.h">
+    <ClInclude Include="engine\component_system\transform_instance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="engine\threading\thread_system.h">
@@ -261,6 +264,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="engine\component_system\physics_asset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt\triple_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt\s_performance_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\component_system\default_component_hashes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

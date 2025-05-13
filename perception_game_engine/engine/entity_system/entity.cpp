@@ -18,50 +18,27 @@ void entity_t::destroy()
 		components[i].destroy();
 	}
 
-	if (on_destroy)
-		on_destroy(this, _class);
+	if (on_destruct)
+		on_destruct(this, _class);
 
 	components.clear();
 }
 
 bool entity_t::construct(entity_layer_t* o,
-	const s_string& n,
-	construct_fn_t _on_create,
-	destruct_fn_t _on_destroy,
-	on_input_receive_fn_t _on_input_receive,
-	on_physics_update_fn_t _on_physics_update,
-	on_frame_fn_t _on_frame,
-	on_render_fn_t _on_render,
-	on_render_ui_fn_t _on_render_ui,
-	on_serialize_fn_t _on_serialize,
-	on_deserialize_fn_t _on_deserialize,
-	on_debug_draw_fn_t _on_debug_draw,
-	on_ui_inspector_fn_t _on_ui_inspector,
-	user_data_t* data
+	const s_string& n, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn
 ) {
 	owner_layer = o;
 	name = s_pooled_string(n);
 	lookup_hash_by_name = name.hash;
 
-	user_data = data;
-
-	on_create = _on_create;
-	on_destroy = _on_destroy;
-	on_input_receive = _on_input_receive;
-	on_physics_update = _on_physics_update;
-	on_frame = _on_frame;
-	on_render = _on_render;
-	on_render_ui = _on_render_ui;
-	on_serialize = _on_serialize;
-	on_deserialize = _on_deserialize;
-	on_debug_draw = _on_debug_draw;
-	on_ui_inspector = _on_ui_inspector;
+	on_construct = construct_fn;
+	on_destruct = deconstruct_fn;
 
 	auto ts = get_current_thread_storage();
 	ts->current_layer = owner_layer;
 	ts->current_entity = this;
-	if (on_create)
-		_class = on_create(this,user_data);
+	if (on_construct)
+		_class = on_construct(this);
 
 	return true;
 }

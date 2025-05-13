@@ -97,9 +97,9 @@ public:
         alive_bits.reserve((n + 63) / 64);
     }
 
-    size_t size() const { return data.size(); }
+    __forceinline size_t size() const { return data.size(); }
 
-    bool is_alive(size_t index) const
+    __forceinline   bool is_alive(size_t index) const
     {
         const size_t block_index = index / 64;
         const size_t bit_index = index % 64;
@@ -110,8 +110,8 @@ public:
         return (alive_bits[block_index] & (1ull << bit_index)) != 0;
     }
 
-    T& operator[](size_t index) { return data[index]; }
-    const T& operator[](size_t index) const { return data[index]; }
+    __forceinline T& operator[](size_t index) { return data[index]; }
+    __forceinline   const T& operator[](size_t index) const { return data[index]; }
 
     template <typename Fn>
     void for_each_alive(Fn&& fn)

@@ -63,15 +63,7 @@ I’m documenting & sharing this project openly to help others who want to learn
 ---
 
 ## 📝 License
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
-
-- ✅ Free for **personal** and **educational** use.
-- ✅ Feel free to modify, learn, and share.
-- ❌ **Commercial use is not allowed** without permission.
-
-> For commercial licensing inquiries, please contact me.
-
-[Read the full license terms](https://creativecommons.org/licenses/by-nc/4.0/).
+In Processing..
 
 ---
 

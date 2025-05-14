@@ -72,10 +72,14 @@ public:
 
         return &data[index];
     }
+
     void remove(size_t index)
     {
         if (index < data.size())
         {
+            if constexpr (!std::is_trivially_destructible<T>::value)
+                data[index].~T();
+
             const size_t bit_index = index % 64;
             const size_t block_index = index / 64;
 

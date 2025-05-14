@@ -16,15 +16,18 @@ void entity_manager::destroy_level(level_t* layer)
 		return;
 
 	const size_t count = levels.size();
+
 	for (size_t i = 0; i < count; ++i)
 	{
 		if (!levels.is_alive(i))
 			continue;
 
+		if (levels[i].is_destroyed_or_pending())
+			continue;
+
 		if (&levels[i] == layer)
 		{
-			levels[i].destroy();
-			levels.remove(i);
+			levels[i].mark_for_destruction();
 			return;
 		}
 	}
@@ -38,6 +41,9 @@ level_t* entity_manager::get_level(uint32_t id)
 	for (size_t i = 0; i < count; ++i)
 	{
 		if (!levels.is_alive(i))
+			continue;
+
+		if (levels[i].is_destroyed_or_pending())
 			continue;
 
 		if (alive_index == id)
@@ -59,6 +65,9 @@ level_t* entity_manager::get_level_by_name(const s_string& name)
 		if (!levels.is_alive(i))
 			continue;
 
+		if (levels[i].is_destroyed_or_pending())
+			continue;
+
 		if (levels[i].lookup_hash_by_name == hash)
 			return &levels[i];
 	}
@@ -73,8 +82,6 @@ bool entity_manager::has_level(const s_string& name) {
 template <typename context_t, typename component_callback, typename entity_callback>
 void entity_manager::process(context_t* ctx, component_callback component_cb, entity_callback entity_cb)
 {
-	auto ts = get_current_thread_storage();
-	
 	const size_t levels_count = levels.size();
 
 	for (size_t i = 0; i < levels_count; ++i)
@@ -84,6 +91,9 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 
 		level_t& level = levels[i];
 
+		if (level.is_destroyed_or_pending())
+			continue;
+
 		const size_t layer_count = level.layers.size();
 
 		for (size_t i = 0; i < layer_count; ++i)
@@ -92,7 +102,9 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 				continue;
 
 			entity_layer_t& layer = level.layers[i];
-			ts->current_layer = &layer;
+
+			if (layer.is_destroyed_or_pending())
+				continue;
 
 			const size_t entity_count = layer.entities.size();
 
@@ -102,10 +114,12 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 					continue;
 
 				entity_t& e = layer.entities[j];
-				if (e.parent)
+
+				if (e.is_destroyed_or_pending())
 					continue;
 
-				ts->current_entity = &e;
+				if (e.parent)
+					continue;
 
 				const size_t component_count = e.components.size();
 				for (size_t k = 0; k < component_count; ++k)
@@ -114,17 +128,19 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 						continue;
 
 					component_t& comp = e.components[k];
-					ts->current_component = &comp;
+
+					if (comp.is_destroyed_or_pending())
+						continue;
+
 
 					component_cb(&e, &comp, ctx);
 				}
 
 				entity_cb(&e, ctx);
 
-				e.for_each_child_recursive(ts,
-					[&component_cb, &entity_cb](thread_storage_t* storage, entity_t* child, void* context_ptr)
+				e.for_each_child_recursive(
+					[&component_cb, &entity_cb]( entity_t* child, void* context_ptr)
 					{
-						storage->current_entity = child;
 
 						const size_t child_component_count = child->components.size();
 						for (size_t c = 0; c < child_component_count; ++c)
@@ -133,7 +149,9 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 								continue;
 
 							component_t& comp = child->components[c];
-							storage->current_component = &comp;
+
+							if (comp.is_destroyed_or_pending())
+								continue;
 
 							component_cb(child, &comp, context_ptr);
 						}
@@ -357,24 +375,117 @@ void entity_manager::on_deserialize(deserializer_t* d)
 	);
 }
 
+void entity_manager::on_gc()
+{
+	const size_t levels_count = levels.size();
+
+	for (size_t l = 0; l < levels_count; ++l)
+	{
+		if (!levels.is_alive(l))
+			continue;
+
+		level_t& level = levels[l];
+
+		if (level.is_destroyed())
+			continue;
+
+		if (level.is_destroy_pending())
+		{
+			if (level.can_destroy()) {
+				level.destroy(true);
+				levels.remove(l);
+				std::cout << "level destroyed" << std::endl;
+			}
+			continue;
+		}
+
+		const size_t layer_count = level.layers.size();
+		for (size_t la = 0; la < layer_count; ++la)
+		{
+			if (!level.layers.is_alive(la))
+				continue;
+
+			entity_layer_t& layer = level.layers[la];
+
+			if (layer.is_destroyed())
+				continue;
+
+			if (layer.is_destroy_pending())
+			{
+				if (layer.can_destroy()) {
+					layer.destroy(true);
+					level.layers.remove(la);
+					std::cout << "layer destroyed" << std::endl;
+				}
+				continue;
+			}
+
+			const size_t entities_count = layer.entities.size();
+
+			for (size_t ea = 0; ea < entities_count; ++ea)
+			{
+				if (!layer.entities.is_alive(ea))
+					continue;
+
+				entity_t& entity = layer.entities[ea];
+
+				if (entity.is_destroyed())
+					continue;
+
+				if (entity.is_destroy_pending())
+				{
+					if (entity.can_destroy()) {
+						entity.destroy(true);
+						layer.entities.remove(ea);
+						std::cout << "entity destroyed" << std::endl;
+					}
+					continue;
+				}
+
+				const size_t component_count = entity.components.size();
+				for (size_t c = 0; c < component_count; ++c)
+				{
+					if (!entity.components.is_alive(c))
+						continue;
+
+					component_t& comp = entity.components[c];
+
+					if (comp.is_destroyed())
+						continue;
+
+					if (comp.is_destroy_pending())
+					{
+						if (comp.can_destroy())
+						{
+							comp.destroy(true);
+							entity.components.remove(c);
+							std::cout << "component destroyed" << std::endl;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void entity_manager::destroy()
 {
 	execute_stop();
 
-	auto ts = get_current_thread_storage();
+	const size_t levels_count = levels.size();
 
-	const size_t count = levels.size();
-	for (size_t i = 0; i < count; ++i)
+	for (size_t l = 0; l < levels_count; ++l)
 	{
-		if (!levels.is_alive(i))
+		if (!levels.is_alive(l))
 			continue;
 
-		level_t& level = levels[i];
-		ts->current_level = &level;
-		level.destroy();
-	}
+		level_t& level = levels[l];
 
-	levels.clear();
+		if (level.is_destroyed())
+			continue;
+
+		level.destroy(true);
+	}
 }
 
 
@@ -382,6 +493,7 @@ void entity_manager::execute_stop()
 {
 	t_on_frame.terminate_and_close();
 	t_on_physics_update.terminate_and_close();
+	t_on_gc.terminate_and_close();
 }
 
 class test_component
@@ -407,6 +519,12 @@ void entity_manager::execute_start()
 
 	auto transform = transform_entity->add_transform_component(vector3(0.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
 
+	transform->destroy(false);
+
+	std::cout << "level is_destroyed"<< level->is_destroyed() << std::endl;
+	std::cout << "level is_destroy_pending" << level->is_destroy_pending() << std::endl;
+	
 	t_on_frame.create(execute_on_frame, nullptr);
 	t_on_physics_update.create(execute_on_physics_update, nullptr);
+	t_on_gc.create(execute_gc, nullptr);
 }

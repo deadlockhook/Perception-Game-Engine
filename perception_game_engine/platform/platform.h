@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <windows.h>
+#include <atomic>
+#include "atomic_datatype.h"
 
 #ifdef _WIN64
 #pragma comment(lib, "winmm.lib")

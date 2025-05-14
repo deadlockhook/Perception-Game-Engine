@@ -275,5 +275,8 @@
     <ClInclude Include="engine\component_system\default_component_hashes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="platform\atomic_datatype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

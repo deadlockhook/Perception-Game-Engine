@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "default_component_hashes.h"
 #include "../entity_system/entity_system.h"
 #include "../../math/transform.h"
@@ -6,90 +6,178 @@
 #include "../../math/quat.h"
 #include "../../math/aabb.h"
 #include "../../crt/triple_buffer.h"
-
-
+#include "../global_vars.h"
 
 enum transform_flags_t : uint32_t {
     transform_flag_none = 0,
-    transform_flag_dirty = 1 << 0,
+    transform_flag_world_dirty = 1 << 0,
+    transform_flag_position_delta = 1 << 1,
+    transform_flag_rotation_delta = 1 << 2,
+    transform_flag_scale_delta = 1 << 3,
+    transform_flag_absolute_position = 1 << 4,
+    transform_flag_absolute_rotation = 1 << 5,
+    transform_flag_absolute_scale = 1 << 6,
+    transform_flag_parent_change = 1 << 7, 
 };
 
 struct transform_instance_t {
 
-    triple_buffer_t<transform_t> local_transform; 
-    triple_buffer_t<transform_t> world_transform;  
+    std::atomic<uint32_t> flags = transform_flag_none;
 
-    std::atomic<uint32_t> flags = transform_flag_dirty;
+    struct transform_data_t {
+        transform_t local_transform;
+        transform_t world_transform;
+    };
 
-    bool transform_updated_this_tick = false;
+    transform_data_t transform_data[max_physics_ticks];
+    transform_data_t interp_transform;
+
+    vector3 queued_position_delta = vector3::zero();
+    quat queued_rotation_delta = quat::identity();
+    vector3 queued_scale_factor = vector3(1.0f, 1.0f, 1.0f);
+    vector3 queued_absolute_position;
+    quat queued_absolute_rotation;
+    vector3 queued_absolute_scale;
+   
+    parent_change_request_t parent_change_request;
+
+    __forceinline transform_data_t& get_transform_data_for_tick(uint64_t tick) {
+        return transform_data[tick % max_physics_ticks];
+    }
+
+    __forceinline const transform_data_t& get_transform_data_for_tick(uint64_t tick) const {
+        return transform_data[tick % max_physics_ticks];
+    }
 
     static class_t* create_transform(entity_t* e);
     static void on_physics_update(entity_t* e, class_t* c);
     static void on_frame_update(entity_t* e, class_t* c);
-
     static void destroy_transform(entity_t* e, class_t* c);
-    static void sync_all_transforms(entity_layer_t* layer);
-    static void set_all_transforms_available(entity_layer_t* layer);
 
-    void update_transform(entity_t* e)
-    {
-        if (is_dirty()) {
+    static void on_parent_detach(entity_t* parent, entity_t* self, class_t* c);
+    static void on_parent_attach(entity_t* new_parent, entity_t* self, class_t* c);
 
-            transform_t parent_world = transform_t::identity();
+
+    void queue_translate(const vector3& delta) {
+        queued_position_delta += delta;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_position_delta, std::memory_order_relaxed);
+    }
+
+    void queue_rotate(const quat& delta) {
+        queued_rotation_delta = delta * queued_rotation_delta;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_rotation_delta, std::memory_order_relaxed);
+    }
+
+    void queue_scale(const vector3& factor) {
+        queued_scale_factor = queued_scale_factor * factor;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_scale_delta, std::memory_order_relaxed);
+    }
+
+    void queue_set_position(const vector3& pos) {
+        queued_absolute_position = pos;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_absolute_position, std::memory_order_relaxed);
+    }
+
+    void queue_set_rotation(const quat& rot) {
+        queued_absolute_rotation = rot;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_absolute_rotation, std::memory_order_relaxed);
+    }
+
+    void queue_set_scale(const vector3& scl) {
+        queued_absolute_scale = scl;
+        flags.fetch_or(transform_flag_world_dirty | transform_flag_absolute_scale, std::memory_order_relaxed);
+    }
+  
+    void update_transform(entity_t* e, uint64_t tick) {
+        uint32_t current_flags = flags.load(std::memory_order_acquire);
+
+        if (current_flags & transform_flag_parent_change) {
+            auto& data = transform_data[tick % max_physics_ticks];
+
+            if (parent_change_request.detach) {
+                data.local_transform = data.world_transform;
+            }
+            else if (parent_change_request.new_parent) {
+                if (auto* parent_transform = parent_change_request.new_parent->get_component<transform_instance_t>(transform_instance_t_register_hash)) {
+                    auto parent_world_inv = parent_transform->transform_data[tick % max_physics_ticks].world_transform.inverse();
+                    data.local_transform = parent_world_inv.combine(data.world_transform);
+                }
+            }
+
+            flags.fetch_and(~transform_flag_parent_change, std::memory_order_relaxed);
+        }
+
+        if (current_flags & transform_flag_world_dirty) {
+            auto& data = transform_data[tick % max_physics_ticks];
+
+            if (current_flags & transform_flag_absolute_position) {
+                data.local_transform.position = queued_absolute_position;
+            }
+            if (current_flags & transform_flag_absolute_rotation) {
+                data.local_transform.rotation = queued_absolute_rotation;
+            }
+            if (current_flags & transform_flag_absolute_scale) {
+                data.local_transform.scale = queued_absolute_scale;
+            }
+
+            if (current_flags & transform_flag_position_delta) {
+                data.local_transform.position += queued_position_delta;
+            }
+            if (current_flags & transform_flag_rotation_delta) {
+                data.local_transform.rotation = queued_rotation_delta * data.local_transform.rotation;
+            }
+            if (current_flags & transform_flag_scale_delta) {
+                data.local_transform.scale = data.local_transform.scale * queued_scale_factor;
+            }
 
             if (e && e->parent) {
-                auto* parent_transform = e->parent->get_component<transform_instance_t>(transform_instance_t_register_hash);
-
-                if (parent_transform)
-                    parent_world = parent_transform->world_transform.wb();
-
+                if (auto* parent_transform = e->parent->get_component<transform_instance_t>(transform_instance_t_register_hash)) {
+                    auto parent_world = parent_transform->transform_data[tick % max_physics_ticks].world_transform;
+                    data.world_transform = parent_world.combine(data.local_transform);
+                }
+                else {
+                    data.world_transform = data.local_transform;
+                }
             }
-	
-            world_transform.wb() = parent_world.combine(local_transform.wb());
-            clear_dirty();
-            transform_updated_this_tick = true;
+            else {
+                data.world_transform = data.local_transform;
+            }
+
+            queued_position_delta = vector3::zero();
+            queued_rotation_delta = quat::identity();
+            queued_scale_factor = vector3(1.0f, 1.0f, 1.0f);
+
+            flags.fetch_and(~(transform_flag_world_dirty |
+                transform_flag_position_delta |
+                transform_flag_rotation_delta |
+                transform_flag_scale_delta |
+                transform_flag_absolute_position |
+                transform_flag_absolute_rotation |
+                transform_flag_absolute_scale), std::memory_order_relaxed);
+
+            const size_t child_count = e->children.size();
+            for (size_t i = 0; i < child_count; ++i) {
+                if (!e->children.is_alive(i))
+                    continue;
+
+                entity_t* child_entity = e->children[i];
+                if (!child_entity)
+                    continue;
+
+                auto* child_transform = child_entity->get_component<transform_instance_t>(transform_instance_t_register_hash);
+                if (child_transform) {
+                    child_transform->flags.fetch_or(transform_flag_world_dirty, std::memory_order_relaxed);
+                }
+            }
         }
     }
 
-    void mark_dirty() {
-        flags.fetch_or(transform_flag_dirty, std::memory_order_relaxed);
-    }
 
-    void clear_dirty() {
-        flags.fetch_and(~transform_flag_dirty, std::memory_order_relaxed);
-    }
+    // Debug print
+    void print(entity_t* self, uint64_t tick) const {
+        auto& data = transform_data[tick % max_physics_ticks];
 
-    bool is_dirty() const {
-        return (flags.load(std::memory_order_acquire) & transform_flag_dirty) != 0;
-    }
-
-  
-    void set_local_transform(const transform_t& t) {
-        local_transform.wb() = t;  
-        mark_dirty();
-    }
-
-    void translate_local(const vector3& delta) {
-        local_transform.wb().position += delta;
-        mark_dirty();
-    }
-
-    void rotate_local(const quat& delta) {
-        local_transform.wb().rotation = delta * local_transform.wb().rotation;
-        mark_dirty();
-    }
-
-    void scale_local(const vector3& factor) {
-        local_transform.wb().scale = local_transform.wb().scale * factor;
-        mark_dirty();
-    }
-
-    void sync_world_to_local(entity_t* self, const transform_t& new_world) {
-         //redo
-    }
-
-    void print(entity_t* self) const {
-        const transform_t& w = const_cast<transform_instance_t*>(this)->world_transform.wb();
+        const transform_t& w = data.world_transform;
         vector3 euler = w.rotation.to_euler().to_degrees();
 
         std::cout << "[transform] Pos: (" << w.position.x << ", " << w.position.y << ", " << w.position.z << ")\n";

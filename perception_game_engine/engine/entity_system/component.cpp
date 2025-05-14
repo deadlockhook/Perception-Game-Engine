@@ -3,15 +3,25 @@
 #include "../component_system/transform_instance.h"
 #include "../component_system/physics_asset.h"
 
-void component_t::destroy()
+void component_t::destroy(bool force)
 {
-	auto ts = get_current_thread_storage();
-	ts->current_layer = owner->owner_layer;
-	ts->current_entity = owner;
-	ts->current_component = this;
+	if (force)
+	{
+		if (is_destroyed())
+			return; 
 
-	if (on_destruct)
-		on_destruct(owner,_class);
+		if (on_destruct)
+			on_destruct(owner, _class);
+
+		_class = nullptr;
+		owner = nullptr;
+		on_destruct = nullptr;
+
+		post_destruction();
+	}
+	else
+		mark_for_destruction();
+	
 }
 
 bool component_t::construct(
@@ -22,10 +32,6 @@ bool component_t::construct(
 	owner = _owner;
 	name = s_pooled_string(n);
 	lookup_hash_by_name = name.hash;
-
-	auto ts = get_current_thread_storage();
-	ts->current_layer = owner->owner_layer;
-	ts->current_entity = owner;
 
 	on_construct = construct_fn;
 	on_destruct = deconstruct_fn;
@@ -75,6 +81,9 @@ bool entity_t::remove_component(uint32_t string_hash)
 		if (!components.is_alive(i))
 			continue;
 
+		if (components[i].is_destroyed_or_pending())
+			continue;
+
 		if (components[i].lookup_hash_by_name == string_hash)
 		{
 			auto& hash_map = owner_layer->map_components[string_hash];
@@ -92,8 +101,7 @@ bool entity_t::remove_component(uint32_t string_hash)
 				}
 			}
 
-			components[i].destroy();
-			components.remove(i);
+			components[i].mark_for_destruction();
 			return true;
 		}
 	}
@@ -106,19 +114,24 @@ bool entity_t::remove_component(const s_string& name)
 	return remove_component(fnv1a32(name.c_str()));
 }
 
-transform_instance_t* entity_t::add_transform_component(const vector3& position, const quat& rotation,
-	const vector3& scale )
+component_t* entity_t::add_transform_component(const vector3& position, const quat& rotation,
+	const vector3& scale)
 {
-	auto transform = add_component(transform_instance_t_register, transform_instance_t::create_transform, transform_instance_t::destroy_transform);
 	
+	auto transform = add_component(transform_instance_t_register, transform_instance_t::create_transform, transform_instance_t::destroy_transform);
+
 	if (!transform)
 		return nullptr;
 
 	transform->set_physics_update_callback(transform_instance_t::on_physics_update);
-	transform->set_frame_callback(transform_instance_t::on_frame_update);
+	transform->set_frame_update_callback(transform_instance_t::on_frame_update);
+	transform->set_on_parent_attach(transform_instance_t::on_parent_attach);
+	transform->set_on_parent_detach(transform_instance_t::on_parent_detach);
 
 	auto transform_instance = reinterpret_cast<transform_instance_t*>(transform->_class);
-	transform_instance->set_local_transform(transform_t(position, rotation, scale));
+	transform_instance->queue_set_position(position);
+	transform_instance->queue_set_rotation(rotation);
+	transform_instance->queue_set_scale(scale);
 
-	return transform_instance;
+	return transform;
 }

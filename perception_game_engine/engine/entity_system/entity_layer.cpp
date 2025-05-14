@@ -45,8 +45,7 @@ entity_t* entity_layer_t::get_entity_by_name(const s_string& name)
 		if (!entities.is_alive(i))
 			continue;
 
-		if (entities[i].lookup_hash_by_name == hash)
-			return &entities[i];
+	
 	}
 	return nullptr;
 }
@@ -60,31 +59,35 @@ bool entity_layer_t::remove_entity_by_class(class_t* class_ptr)
 		if (!entities.is_alive(i))
 			continue;
 
-		if (entities[i]._class == class_ptr)
-		{
-			entities[i].destroy();
-			entities.remove(i);
-			return true;
-		}
+
 	}
 	return false;
 }
 
-void entity_layer_t::destroy()
+void entity_layer_t::destroy(bool force)
 {
-	auto ts = get_current_thread_storage();
-	ts->current_layer = this;
+	if (is_destroyed_or_pending())
+		return;
 
-	const size_t count = entities.size();
-	for (size_t i = 0; i < count; ++i)
+	if (force)
 	{
-		if (!entities.is_alive(i))
-			continue;
+		const size_t entity_count = entities.size();
+		for (size_t e = 0; e < entity_count; ++e)
+		{
+			if (!entities.is_alive(e))
+				continue;
 
-		ts->current_entity = &entities[i];
-		entities[i].destroy();
+			entity_t& entity = entities[e];
+			entity.destroy(true);
+			entities.remove(e);
+		}
+
+		post_destruction(); 
 	}
-
-	entities.clear();
+	else
+	{
+		mark_for_destruction();
+	}
 }
+
 

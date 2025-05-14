@@ -27,8 +27,7 @@ void level_t::destroy_layer(entity_layer_t* layer)
 
 		if (&layers[i] == layer)
 		{
-			layers[i].destroy();
-			layers.remove(i);
+			layers[i].mark_for_destruction();
 			return;
 		}
 	}
@@ -42,6 +41,9 @@ entity_layer_t* level_t::get_layer(uint32_t id)
 	for (size_t i = 0; i < count; ++i)
 	{
 		if (!layers.is_alive(i))
+			continue;
+
+		if (layers[i].is_destroyed_or_pending())
 			continue;
 
 		if (alive_index == id)
@@ -63,6 +65,9 @@ entity_layer_t* level_t::get_layer_by_name(const s_string& name)
 		if (!layers.is_alive(i))
 			continue;
 
+		if (layers[i].is_destroyed_or_pending())
+			continue;
+
 		if (layers[i].lookup_hash_by_name == hash)
 			return &layers[i];
 	}
@@ -73,7 +78,38 @@ entity_layer_t* level_t::get_layer_by_name(const s_string& name)
 bool level_t::has_layer(const s_string& name) {
 	return get_layer_by_name(name) != nullptr;
 }
+void level_t::destroy(bool force)
+{
+	if (force)
+	{
+		if (is_destroyed())
+			return; 
 
+		const size_t layer_count = layers.size();
+		for (size_t l = 0; l < layer_count; ++l)
+		{
+			if (!layers.is_alive(l))
+				continue;
+
+			entity_layer_t& layer = layers[l];
+
+			if (layer.is_destroyed())
+				continue;
+
+			layer.destroy(true); 
+			layers.remove(l);    
+		}
+
+		post_destruction(); 
+	}
+	else
+		mark_for_destruction();
+	
+}
+
+
+
+/*
 void level_t::destroy()
 {
 	auto ts = get_current_thread_storage();
@@ -90,4 +126,4 @@ void level_t::destroy()
 	}
 
 	layers.clear();
-}
+}*/

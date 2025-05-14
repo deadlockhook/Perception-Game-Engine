@@ -64,14 +64,14 @@ struct transform_t {
         rot_m[0][0] /= scl.x; rot_m[0][1] /= scl.x; rot_m[0][2] /= scl.x;
         rot_m[1][0] /= scl.y; rot_m[1][1] /= scl.y; rot_m[1][2] /= scl.y;
         rot_m[2][0] /= scl.z; rot_m[2][1] /= scl.z; rot_m[2][2] /= scl.z;
-        quat rot = rot_m.get_rotation(); 
+        quat rot = rot_m.get_rotation();
         return transform_t(pos, rot, scl);
     }
 
     static transform_t look_at(const vector3& position, const vector3& target, const vector3& up = vector3(0, 1, 0)) {
         vector3 forward = (target - position).normalized();
         vector3 right = up.cross(forward).normalized();
-        vector3 true_up = forward.cross(right); 
+        vector3 true_up = forward.cross(right);
 
         matrix4x4 rot_basis = matrix4x4::identity();
         rot_basis[0][0] = static_cast<float>(right.x);
@@ -86,7 +86,7 @@ struct transform_t {
         rot_basis[1][2] = static_cast<float>(forward.y);
         rot_basis[2][2] = static_cast<float>(forward.z);
 
-        quat rotation = rot_basis.get_rotation(); 
+        quat rotation = rot_basis.get_rotation();
         return transform_t(position, rotation, vector3(1.0));
     }
 

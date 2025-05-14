@@ -221,6 +221,7 @@
     <ClInclude Include="memory\mem.h" />
     <ClInclude Include="crt\safe_crt.h" />
     <ClInclude Include="crt\s_string.h" />
+    <ClInclude Include="platform\atomic_datatype.h" />
     <ClInclude Include="platform\platform.h" />
     <ClInclude Include="serialize\fnva_hash.h" />
   </ItemGroup>

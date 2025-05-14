@@ -63,7 +63,7 @@ I’m documenting & sharing this project openly to help others who want to learn
 ---
 
 ## 📝 License
-<a href="https://github.com/deadlockhook/Perception-Game-Engine">Perception Game Engine</a> © 2025 by <a href="https://github.com/deadlockhook">Harjot Singh Gill</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" style="max-width: 1em;max-height:1em;margin-left: .2em;">
+Perception Game Engine © 2025 by Harjot Singh Gill is licensed under Creative Commons Attribution-NonCommercial 4.0 International. To view a copy of this license, visit https://creativecommons.org/licenses/by-nc/4.0/
 
 ---
 

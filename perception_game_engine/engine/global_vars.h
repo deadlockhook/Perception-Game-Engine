@@ -6,9 +6,36 @@ constexpr uint32_t max_physics_ticks = 8;
 
 enum thread_ids_t : uint16_t
 {
-    thread_id_frame = 0,
+    thread_id_system = 0,
+    thread_id_frame,
     thread_id_physics,
     thread_id_count
+};
+
+struct frame_data_t
+{
+    double frame_time_ms = 0.0;
+    uint64_t tick_count = 0;
+    double time_accumulator = 0.0;
+    double delta_time_ms = 0.0;
+    double target_hz = 60.0;
+    double current_hz = 0.0;
+    double target_frame_time_ms = 1000.0 / 60.0;
+
+    void update_refresh_rate(double new_target_hz)
+    {
+        target_hz = new_target_hz;
+        target_frame_time_ms = 1000.0 / new_target_hz;
+    }
+
+    void reset()
+    {
+        frame_time_ms = 0.0;
+        tick_count = 0;
+        time_accumulator = 0.0;
+        delta_time_ms = 0.0;
+        current_hz = 0.0;
+    }
 };
 
 struct global_vars_t
@@ -20,60 +47,18 @@ struct global_vars_t
 
     struct
     {
-        struct
-        {
-            double frame_time_ms = 0.0;
-            uint64_t tick_count = 0;
-            double time_accumulator = 0.0;
-            double delta_time_ms = 0.0;
-            double target_hz = 60.0;
-            double current_hz = 0.0;
-            double target_frame_time_ms = 1000.0 / 60.0;
+        struct {
+            frame_data_t frame_data;
+        } render_thread;
 
-            void update_refresh_rate(double new_target_hz)
-            {
-                target_hz = new_target_hz;
-                target_frame_time_ms = 1000.0 / new_target_hz;
-            }
+        struct {
+            frame_data_t frame_data;
+        } physics_thread;
 
-            void reset()
-            {
-                frame_time_ms = 0.0;
-                tick_count = 0;
-                time_accumulator = 0.0;
-                delta_time_ms = 0.0;
-                current_hz = 0.0;
-            }
-
-        } physics_update;
-
-        struct
-        {
-            double frame_time_ms = 0.0;
-            uint64_t tick_count = 0;
-            double time_accumulator = 0.0;
-            double delta_time_ms = 0.0;
-            double target_hz = 144.0;
-            double target_frame_time_ms = 1000.0 / 144.0;
-            double current_hz = 0.0;
-            uint64_t use_physics_tick = 0;
-
-            void update_refresh_rate(double new_target_hz)
-            {
-                target_hz = new_target_hz;
-                target_frame_time_ms = 1000.0 / new_target_hz;
-            }
-
-            void reset()
-            {
-                frame_time_ms = 0.0;
-                tick_count = 0;
-                time_accumulator = 0.0;
-                delta_time_ms = 0.0;
-                current_hz = 0.0;
-            }
-
-        } frame_update;
+        struct {
+            uint64_t last_physics_tick;
+            frame_data_t frame_data;
+        } frame_thread;
 
         struct
         {

@@ -43,9 +43,8 @@ public:
     __forceinline  interlocked_mutex() : flag(0) {}
 
     __forceinline void lock() {
-        while (InterlockedExchange(&flag, 1) == 1)
-        {
-
+        while (InterlockedExchange(&flag, 1) == 1) {
+            _mm_pause(); 
         }
     }
 

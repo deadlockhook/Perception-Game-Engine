@@ -10,7 +10,7 @@ level_t* entity_manager::create_level(const s_string& name)
 	return layer;
 }
 
-void entity_manager::destroy_level(level_t* layer)
+void entity_manager::destroy_level(level_t* layer, bool force)
 {
 	if (!layer)
 		return;
@@ -27,7 +27,15 @@ void entity_manager::destroy_level(level_t* layer)
 
 		if (&levels[i] == layer)
 		{
-			levels[i].mark_for_destruction();
+			if (force)
+			{
+				levels[i].destroy(true);
+				levels.remove(i);
+			}
+			else
+			{
+				levels[i].mark_for_destruction();
+			}
 			return;
 		}
 	}
@@ -519,11 +527,8 @@ void entity_manager::execute_start()
 
 	auto transform = transform_entity->add_transform_component(vector3(0.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
 
-	transform->destroy(false);
+	transform->destroy();
 
-	std::cout << "level is_destroyed"<< level->is_destroyed() << std::endl;
-	std::cout << "level is_destroy_pending" << level->is_destroy_pending() << std::endl;
-	
 	t_on_frame.create(execute_on_frame, nullptr);
 	t_on_physics_update.create(execute_on_physics_update, nullptr);
 	t_on_gc.create(execute_gc, nullptr);

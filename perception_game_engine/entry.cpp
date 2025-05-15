@@ -8,6 +8,7 @@
 #include <iostream>
 #include "crt/s_string_pool.h"
 #include <random>
+#include "engine/hwnd/window_manager.h"
 
 int main() {
 

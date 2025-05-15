@@ -8,13 +8,12 @@ class_t* transform_instance_t::create_transform(entity_t* e) {
 void transform_instance_t::on_frame_update(entity_t* e, class_t* c)
 {
 	auto* t = reinterpret_cast<transform_instance_t*>(c);
-	auto last_physics_tick = g_vars.get_update_end_tickcount(thread_ids_t::thread_id_physics);
-	
-    if (last_physics_tick == 0)
+
+    if (g_vars.engine.frame_thread.last_physics_tick == 0)
 		return;
 
-	auto& curr_data = t->get_transform_data_for_tick(last_physics_tick);
-	auto& prev_data = t->get_transform_data_for_tick(last_physics_tick - 1);
+	auto& curr_data = t->get_transform_data_for_tick(g_vars.engine.frame_thread.last_physics_tick);
+	auto& prev_data = t->get_transform_data_for_tick(g_vars.engine.frame_thread.last_physics_tick - 1);
 
     //interp and stuff will happen here
 }
@@ -25,7 +24,7 @@ void transform_instance_t::on_physics_update(entity_t* e, class_t* c)
         return;
 
     auto* t = reinterpret_cast<transform_instance_t*>(c);
-	t->update_transform(e, g_vars.get_update_end_tickcount(thread_ids_t::thread_id_physics));
+	t->update_transform(e, g_vars.engine.physics_thread.frame_data.tick_count);
 }
 
 void transform_instance_t::on_parent_detach(entity_t* parent, entity_t* self, class_t* c) {

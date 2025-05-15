@@ -78,6 +78,7 @@ entity_layer_t* level_t::get_layer_by_name(const s_string& name)
 bool level_t::has_layer(const s_string& name) {
 	return get_layer_by_name(name) != nullptr;
 }
+
 void level_t::destroy(bool force)
 {
 	if (force)

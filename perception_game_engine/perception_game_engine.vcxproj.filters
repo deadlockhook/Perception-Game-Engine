@@ -129,13 +129,16 @@
     <ClCompile Include="engine\global_vars.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="engine\setup.cpp">
+    <ClCompile Include="engine\engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="engine\entity_system\level.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="engine\component_system\transform_instance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\input_system\input_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -276,6 +279,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="platform\atomic_datatype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\destructable_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\input_system\input_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

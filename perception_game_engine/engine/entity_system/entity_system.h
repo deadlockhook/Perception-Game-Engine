@@ -10,6 +10,7 @@
 #include "../../math/vector3.h"
 #include "../../math/quat.h"
 #include "../global_vars.h"
+#include "../../memory/destructable_object.h"
 
 using class_t = void*;
 
@@ -53,57 +54,6 @@ struct component_callback_t
 {
 	component_callback_fn callback;
 	void* ctx;
-};
-
-struct destructable_object_t
-{
-	destructable_object_t()
-	{
-		p_set_atomic(destroyed, false);
-		p_set_atomic(destroy_pending, false);
-	}
-
-	atomic_bool_t destroyed;
-	atomic_bool_t destroy_pending;
-
-	__forceinline bool is_destroyed() { return p_get_atomic(destroyed); }
-	__forceinline bool is_destroy_pending() { return p_get_atomic(destroy_pending); }
-	__forceinline bool is_destroyed_or_pending() { return is_destroyed() || is_destroy_pending(); }
-};
-
-struct destruction_queue_t : public destructable_object_t
-{
-	destruction_queue_t() = default;
-
-	uint64_t request_tick[thread_ids_t::thread_id_count];
-
-	void mark_for_destruction()
-	{
-		if (is_destroyed_or_pending())
-			return;
-
-		for (uint16_t i = 0; i < thread_ids_t::thread_id_count; ++i)
-			request_tick[i] = g_vars.get_update_end_tickcount((thread_ids_t)i);
-
-		p_set_atomic(destroy_pending, true);
-	}
-
-	bool can_destroy()
-	{
-		for (uint16_t i = 0; i < thread_ids_t::thread_id_count; ++i)
-		{
-			if (g_vars.get_update_end_tickcount((thread_ids_t)i) < request_tick[i] + 10)
-				return false;
-		}
-
-		return true;
-	}
-
-	void post_destruction()
-	{
-		p_set_atomic(destroyed, true);
-		p_set_atomic(destroy_pending, false);
-	}
 };
 
 class component_callbacks_t
@@ -178,7 +128,7 @@ public:
 		entity_t* owner,
 		const s_string& n, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
-	void destroy(bool force);
+	void destroy(bool force = false);
 public:
 	entity_t* owner = nullptr;
 	class_t* _class = nullptr;
@@ -194,7 +144,7 @@ public:
 	entity_t() = default;
 	~entity_t() = default;
 
-	void destroy(bool force);
+	void destroy(bool force = false);
 
 	bool construct(
 		entity_layer_t* owner,
@@ -275,7 +225,7 @@ public:
 
 	s_performance_vector<component_t*>& get_components_by_hash(uint32_t hash) { return map_components[hash]; }
 
-	void destroy(bool force);
+	void destroy(bool force = false);
 public:
 	s_performance_vector<entity_t> entities;
 	s_map<uint32_t, s_performance_vector<component_t*>> map_components;
@@ -298,7 +248,7 @@ public:
 
 	bool has_layer(const s_string& name);
 
-	void destroy(bool force);
+	void destroy(bool force = false);
 
 	void set_active(bool active) { this->active = active; }
 
@@ -315,7 +265,7 @@ public:
 
 	level_t* create_level(const s_string& name);
 
-	void destroy_level(level_t* layer);
+	void destroy_level(level_t* layer, bool force = false);
 
 	level_t* get_level(uint32_t index);
 	level_t* get_level_by_name(const s_string& name);

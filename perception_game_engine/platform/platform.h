@@ -4,9 +4,21 @@
 #include <atomic>
 #include "atomic_datatype.h"
 
+//#define EDITOR_MODE
+
+
 #ifdef _WIN64
 #pragma comment(lib, "winmm.lib")
 #endif
+
+inline uint32_t p_get_current_thread_id()
+{
+#ifdef _WIN64
+	return GetCurrentThreadId();
+#else
+	return 0;
+#endif
+}
 
 inline void p_sleep(uint32_t ms)
 {

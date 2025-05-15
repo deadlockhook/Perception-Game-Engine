@@ -114,6 +114,8 @@ public:
         return (alive_bits[block_index] & (1ull << bit_index)) != 0;
     }
 
+    __forceinline T& at(size_t index) { return data[index]; }
+    __forceinline   const T& at(size_t index) const { return data[index]; }
     __forceinline T& operator[](size_t index) { return data[index]; }
     __forceinline   const T& operator[](size_t index) const { return data[index]; }
 

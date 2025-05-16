@@ -16,8 +16,7 @@ public:
 
     s_vector(size_t count) {
         if (count) {
-            m_buffer.allocate(count * sizeof(T));
-            m_memory = (T*)m_buffer.data();
+            m_memory = (T*)malloc(count * sizeof(T));
             m_capacity = count;
             m_count = count;
         }
@@ -25,8 +24,7 @@ public:
 
     s_vector(size_t count, const T& value) {
         if (count) {
-            m_buffer.allocate(count * sizeof(T));
-            m_memory = (T*)m_buffer.data();
+            m_memory = (T*)malloc(count * sizeof(T));
             m_capacity = count;
             m_count = count;
             for (size_t i = 0; i < m_count; i++)
@@ -36,8 +34,7 @@ public:
 
     s_vector(const s_vector<T>& other) {
         if (other.m_count) {
-            m_buffer.allocate(other.m_count * sizeof(T));
-            m_memory = (T*)m_buffer.data();
+            m_memory = (T*)malloc(other.m_count * sizeof(T));
             m_capacity = other.m_count;
             m_count = other.m_count;
             for (size_t i = 0; i < m_count; i++)
@@ -53,8 +50,7 @@ public:
         if (this != &other) {
             free_and_clear();
             if (other.m_count) {
-                m_buffer.allocate(other.m_count * sizeof(T));
-                m_memory = (T*)m_buffer.data();
+                m_memory = (T*)malloc(other.m_count * sizeof(T));
                 m_capacity = other.m_count;
                 m_count = other.m_count;
                 for (size_t i = 0; i < m_count; i++)
@@ -67,12 +63,12 @@ public:
     s_vector<T>& operator=(s_vector<T>&& other) noexcept {
         if (this != &other) {
             free_and_clear();
-            m_buffer = std::move(other.m_buffer);
-            m_memory = (T*)m_buffer.data();
+            m_memory = (T*)other.m_memory;
             m_count = other.m_count;
             m_capacity = other.m_capacity;
             other.m_count = 0;
             other.m_capacity = 0;
+            other.m_memory = nullptr;
         }
         return *this;
     }
@@ -92,10 +88,30 @@ public:
     }
 
     void reserve(size_t size) {
+
         if (size > m_capacity) {
-            m_buffer.resize(size * sizeof(T));
-            m_memory = (T*)m_buffer.data();
-            m_capacity = size;
+            if constexpr (std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>) {
+                void* new_memory = (m_memory ? realloc(m_memory, size * sizeof(T)) : malloc(size * sizeof(T)));
+                if (!new_memory)
+                    abort();
+                m_memory = static_cast<T*>(new_memory);
+                m_capacity = size;
+            }
+            else {
+                T* new_memory = static_cast<T*>(malloc(size * sizeof(T)));
+                if (!new_memory)
+                    abort();
+
+                for (size_t i = 0; i < m_count; ++i) {
+                    new (new_memory + i) T(std::move(m_memory[i]));
+                    m_memory[i].~T();
+                }
+
+                free(m_memory);
+                m_memory = new_memory;
+                m_capacity = size;
+            }
+
         }
     }
 
@@ -108,8 +124,8 @@ public:
     void free_and_clear() {
         for (size_t i = 0; i < m_count; ++i)
             m_memory[i].~T();
-        m_buffer.clear();
-        m_buffer.free();
+
+        free((void*)m_memory);
         m_memory = nullptr;
         m_count = 0;
         m_capacity = 0;
@@ -125,13 +141,20 @@ public:
 
     void pop_back() {
         if (m_count)
-            m_memory[--m_count].~T(); 
+            m_memory[--m_count].~T();
     }
 
     void shrink_to_fit() {
-        if (m_capacity > m_count) {
-            m_buffer.resize(m_count * sizeof(T));
-            m_memory = (T*)m_buffer.data();
+        if (m_capacity > m_count && m_count) {
+            T* new_memory = static_cast<T*>(malloc(m_count * sizeof(T)));
+
+            for (size_t i = 0; i < m_count; ++i) {
+                new (new_memory + i) T(std::move(m_memory[i]));
+                m_memory[i].~T();
+            }
+
+            free(m_memory);
+            m_memory = new_memory;
             m_capacity = m_count;
         }
     }
@@ -273,7 +296,6 @@ public:
     }
 
     void swap(s_vector<T>& other) noexcept {
-        std::swap(m_buffer, other.m_buffer);
         std::swap(m_memory, other.m_memory);
         std::swap(m_count, other.m_count);
         std::swap(m_capacity, other.m_capacity);
@@ -293,7 +315,7 @@ public:
     void assign(const T* arr, size_t count) {
         if (!arr || !count) return;
 
-        clear(); 
+        clear();
 
         reserve(count);
         for (size_t i = 0; i < count; ++i)
@@ -334,11 +356,10 @@ public:
     const T* data() const { return m_memory; }
 
     size_t count() const { return m_count; }
-	size_t size() const { return m_count; }
-	size_t capacity() const { return m_capacity; }
-	bool empty() const { return m_count == 0; }
+    size_t size() const { return m_count; }
+    size_t capacity() const { return m_capacity; }
+    bool empty() const { return m_count == 0; }
 private:
-    v_heap_mem m_buffer;
     T* m_memory = nullptr;
     size_t m_count = 0;
     size_t m_capacity = 0;

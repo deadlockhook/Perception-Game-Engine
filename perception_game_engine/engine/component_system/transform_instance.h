@@ -30,7 +30,7 @@ struct transform_instance_t {
     };
 
     transform_data_t transform_data[max_physics_ticks];
-    transform_data_t interp_transform;
+    transform_data_t transform;
 
     vector3 queued_position_delta = vector3::zero();
     quat queued_rotation_delta = quat::identity();
@@ -50,8 +50,13 @@ struct transform_instance_t {
     }
 
     static class_t* create_transform(entity_t* e);
+
     static void on_physics_update(entity_t* e, class_t* c);
+    void on_physics_update_internal(entity_t* e, class_t* c);
+
     static void on_frame_update(entity_t* e, class_t* c);
+    void on_frame_update_internal(entity_t* e, class_t* c);
+
     static void destroy_transform(entity_t* e, class_t* c);
 
     static void on_parent_detach(entity_t* parent, entity_t* self, class_t* c);
@@ -108,6 +113,7 @@ struct transform_instance_t {
         }
 
         if (current_flags & transform_flag_world_dirty) {
+
             auto& data = transform_data[tick % max_physics_ticks];
 
             if (current_flags & transform_flag_absolute_position) {
@@ -130,8 +136,10 @@ struct transform_instance_t {
                 data.local_transform.scale = data.local_transform.scale * queued_scale_factor;
             }
 
-            if (e && e->parent) {
-                if (auto* parent_transform = e->parent->get_component<transform_instance_t>(transform_instance_t_register_hash)) {
+            if (e && e->parent.valid()) {
+				auto parent = e->parent.get();
+
+                if (auto* parent_transform = parent->get_component<transform_instance_t>(transform_instance_t_register_hash)) {
                     auto parent_world = parent_transform->transform_data[tick % max_physics_ticks].world_transform;
                     data.world_transform = parent_world.combine(data.local_transform);
                 }
@@ -160,7 +168,8 @@ struct transform_instance_t {
                 if (!e->children.is_alive(i))
                     continue;
 
-                entity_t* child_entity = e->children[i];
+                entity_t* child_entity = e->children[i].get();
+               
                 if (!child_entity)
                     continue;
 

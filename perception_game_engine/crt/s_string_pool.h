@@ -32,11 +32,11 @@ public:
             if (!pool.is_alive(i))
                 continue;
 
-            if (pool[i].hash == hash)
-                return pool[i].str;
+            if (pool[i]->hash == hash)
+                return pool[i]->str;
         }
 
-        pooled_string_t* new_entry = pool.push_back(pooled_string_t(s_string(str)));
+        pooled_string_t* new_entry = pool.push_back(new pooled_string_t(s_string(str)));
         return new_entry->str;
     }
 
@@ -52,7 +52,7 @@ public:
             if (!pool.is_alive(i))
                 continue;
 
-            if (pool[i].hash == hash)
+            if (pool[i]->hash == hash)
                 return true;
         }
         return false;
@@ -64,21 +64,26 @@ public:
             if (!pool.is_alive(i))
                 continue;
 
-            if (pool[i].hash == hash)
-                return &pool[i].str;
+            if (pool[i]->hash == hash)
+                return &pool[i]->str;
         }
         return nullptr;
     }
 
     void clear() {
         unique_lock<critical_section> lock(&mutex);
+        for (size_t i = 0; i < pool.size(); ++i) {
+            if (pool.is_alive(i))
+                delete pool[i];
+        }
         pool.clear();
     }
+
 
     size_t size() const { return pool.size(); }
 
 private:
-    s_performance_vector<pooled_string_t> pool;
+    s_performance_vector<pooled_string_t*> pool;
     critical_section mutex;
 };
 
@@ -93,7 +98,7 @@ inline const s_string& intern_string(const s_string& str) {
 }
 
 struct s_pooled_string {
-    s_string* str = nullptr;
+    const s_string* str = nullptr;
     uint32_t hash = 0;
 
     s_pooled_string() = default;
@@ -101,10 +106,11 @@ struct s_pooled_string {
 
     s_pooled_string(const char* raw) {
         hash = fnv1a32(raw);
-        str = (s_string*)&intern_string(raw);
+        str = &intern_string(raw);
     }
 
     const char* c_str() const { return str ? str->c_str() : ""; }
     operator const char* () const { return c_str(); }
     operator const s_string& () const { return *str; }
 };
+

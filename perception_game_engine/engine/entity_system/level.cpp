@@ -7,76 +7,33 @@ void level_t::init_level(const s_string& n)
 	lookup_hash_by_name = name.hash;
 }
 
-entity_layer_t* level_t::create_layer(const s_string& name)
+s_performance_struct_t level_t::create_layer(const s_string& name)
 {
-	entity_layer_t* layer = layers.emplace_back();
-	layer->init_layer(name);
-	return layer;
+	s_performance_struct_t layer_perf_index = layers.push_back_perf_struct(entity_layer_t());
+	entity_layer_t& layer = layers[layer_perf_index.index];
+	layer.init_layer(s_performance_struct_t{ this->index }, name);
+	return layer_perf_index;
 }
 
-void level_t::destroy_layer(entity_layer_t* layer)
+void level_t::destroy_layer(const s_performance_struct_t& layer_perf_index)
 {
-	if (!layer)
-		return;
-
 	const size_t count = layers.size();
 	for (size_t i = 0; i < count; ++i)
 	{
 		if (!layers.is_alive(i))
 			continue;
 
-		if (&layers[i] == layer)
+		auto& layer = layers[i];
+
+		if (layer.is_destroyed_or_pending())
+			continue;
+
+		if (layer.index == layer_perf_index.index)
 		{
-			layers[i].mark_for_destruction();
+			layer.mark_for_destruction();
 			return;
 		}
 	}
-}
-
-entity_layer_t* level_t::get_layer(uint32_t id)
-{
-	const size_t count = layers.size();
-	uint32_t alive_index = 0;
-
-	for (size_t i = 0; i < count; ++i)
-	{
-		if (!layers.is_alive(i))
-			continue;
-
-		if (layers[i].is_destroyed_or_pending())
-			continue;
-
-		if (alive_index == id)
-			return &layers[i];
-
-		++alive_index;
-	}
-
-	return nullptr;
-}
-
-entity_layer_t* level_t::get_layer_by_name(const s_string& name)
-{
-	const uint32_t hash = fnv1a32(name.c_str());
-	const size_t count = layers.size();
-
-	for (size_t i = 0; i < count; ++i)
-	{
-		if (!layers.is_alive(i))
-			continue;
-
-		if (layers[i].is_destroyed_or_pending())
-			continue;
-
-		if (layers[i].lookup_hash_by_name == hash)
-			return &layers[i];
-	}
-
-	return nullptr;
-}
-
-bool level_t::has_layer(const s_string& name) {
-	return get_layer_by_name(name) != nullptr;
 }
 
 void level_t::destroy(bool force)
@@ -97,7 +54,7 @@ void level_t::destroy(bool force)
 			if (layer.is_destroyed())
 				continue;
 
-			layer.destroy(true); 
+			layer.destroy(true);
 			layers.remove(l);    
 		}
 

@@ -44,6 +44,7 @@ struct p_atomic
     // Atomic load
     __forceinline T load(std::memory_order = std::memory_order_relaxed) const
     {
+        return value;
 #if defined(_MSC_VER)
         volatile T* ptr = const_cast<volatile T*>(&value);
 

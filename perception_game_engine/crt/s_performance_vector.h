@@ -2,11 +2,25 @@
 #include "s_vector.h"
 #include "../engine/threading/thread_system.h"
 
+#define invalid_index (uint64_t)-1
+
 template <typename T>
 struct s_stable_vector_iterator
 {
     T* ptr = nullptr;
     size_t index = 0;
+};
+
+struct s_performance_struct_t
+{
+	s_performance_struct_t() = default;
+	s_performance_struct_t(uint64_t index) : index(index) {}
+	s_performance_struct_t(const s_performance_struct_t& other) : index(other.index) {}
+
+	static s_performance_struct_t invalid() { return s_performance_struct_t{ invalid_index }; }
+
+	bool valid() { return index != invalid_index; }
+    uint64_t index = 0;
 };
 
 template <typename T>
@@ -16,7 +30,52 @@ public:
     s_performance_vector() = default;
     ~s_performance_vector() = default;
 
-    T* push_back(const T& value)
+	bool has_free_indices() const { return !free_indices.empty(); }
+
+    T* get_free()
+    {
+        size_t index;
+        if (!free_indices.empty())
+        {
+            index = free_indices.back();
+            free_indices.pop_back();
+            alive_bits[index / 64] |= (1ull << (index % 64));
+        }
+        else
+            return nullptr;
+
+        return &data[index];
+    }
+
+	s_performance_struct_t push_back_perf_struct(const T& value)
+	{
+        s_performance_struct_t ret;
+        if (!free_indices.empty())
+        {
+            ret.index = free_indices.back();
+            free_indices.pop_back();
+
+            data[ret.index] = value;
+            alive_bits[ret.index / 64] |= (1ull << (ret.index % 64));
+        }
+        else
+        {
+            data.push_back(value);
+            ret.index = data.size() - 1;
+
+            const size_t bit_index = ret.index % 64;
+            const size_t block_index = ret.index / 64;
+
+            if (block_index >= alive_bits.size())
+                alive_bits.push_back(0);
+
+            alive_bits[block_index] |= (1ull << bit_index);
+        }
+
+        return ret;
+	}
+
+    T& push_back(const T& value)
     {
         size_t index;
         if (!free_indices.empty())
@@ -41,7 +100,7 @@ public:
             alive_bits[block_index] |= (1ull << bit_index);
         }
 
-        return &data[index];
+        return data[index];
     }
 
     template <typename... Args>
@@ -94,6 +153,8 @@ public:
         alive_bits.clear();
         free_indices.clear();
     }
+
+	T* _data() { return data.data(); }
 
     void reserve(size_t n)
     {

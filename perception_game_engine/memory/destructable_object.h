@@ -39,7 +39,7 @@ struct destruction_queue_t : public destructable_object_t
 	{
 		for (uint16_t i = 0; i < thread_ids_t::thread_id_count; ++i)
 		{
-			if (g_vars.get_update_end_tickcount((thread_ids_t)i) < request_tick[i] + 10)
+			if (g_vars.get_update_end_tickcount((thread_ids_t)i) < request_tick[i] + 2)
 				return false;
 		}
 

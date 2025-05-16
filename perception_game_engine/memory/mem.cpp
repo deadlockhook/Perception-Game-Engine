@@ -76,7 +76,15 @@ void v_mem::free()
 			size = 0;
 		}
 	}
+}    
+
+HANDLE heap_handle = nullptr;
+void v_heap_mem::init()
+{
+	if (!heap_handle)
+		heap_handle = GetProcessHeap();
 }
+
 
 bool v_heap_mem::resize(size_t new_size)
 {
@@ -86,10 +94,12 @@ bool v_heap_mem::resize(size_t new_size)
 	if (!memory)
 		return allocate(new_size);
 
-	void* new_memory = HeapReAlloc(heap, 0, memory, new_size);
+	void* new_memory = HeapReAlloc(heap_handle, 0, memory, new_size);
 
 	if (!new_memory)
 		return false;
+
+	std::cout << "resized " << size << " old " << memory << " new "<< new_memory << std::endl;
 
 	memory = new_memory;
 	size = new_size;
@@ -103,12 +113,14 @@ bool v_heap_mem::allocate(size_t size)
 	if (memory)
 		free();
 
-	heap = GetProcessHeap();
-	if (!heap)
-		return false;
+	if (!heap_handle)
+		heap_handle = GetProcessHeap();
 
-	memory = HeapAlloc(heap, 0, size);
+	memory = HeapAlloc(heap_handle, 0, size);
 	this->size = size;
+
+	std::cout << "allocated " << size <<  memory << std::endl;
+
 	//std::cout << " new memory allocated " << memory << std::endl;
 	return memory != nullptr;
 }
@@ -126,14 +138,14 @@ void v_heap_mem::clear()
 
 void v_heap_mem::free()
 {
-	if (memory && heap)
+	if (memory)
 	{
 		//std::cout << " free memory " << memory << std::endl;
+		std::cout << "freed " << size << " bytes at " << memory << std::endl;
 
 		clear();
-		HeapFree(heap, 0, memory);
+		HeapFree(heap_handle, 0, memory);
 		memory = nullptr;
-		heap = nullptr;
 		size = 0;
 	}
 }

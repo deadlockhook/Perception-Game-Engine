@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <Windows.h>
 #include <cstdint>
 #include "../crt/atomic.h"
@@ -64,6 +64,8 @@ public:
         free();
     }
 
+    static void init();
+
     v_heap_mem(v_heap_mem&& other) noexcept
     {
         *this = std::move(other);
@@ -75,11 +77,9 @@ public:
         {
             free();
             memory = other.memory;
-            heap = other.heap;
             size = other.size;
 
             other.memory = nullptr;
-            other.heap = nullptr;
             other.size = 0;
         }
         return *this;
@@ -88,7 +88,6 @@ public:
     void swap(v_heap_mem& other) noexcept
     {
         std::swap(memory, other.memory);
-        std::swap(heap, other.heap);
         std::swap(size, other.size);
     }
 public:
@@ -106,7 +105,6 @@ public:
     {
         void* ptr = memory;
         memory = nullptr;
-        heap = nullptr;
         size = 0;
         return ptr;
     }
@@ -130,7 +128,6 @@ public:
     void release_mutex() { m_lock.release(); }
 private:
     void* memory = nullptr;
-    HANDLE heap = nullptr;
     size_t size = 0;
     critical_section m_lock;
 };

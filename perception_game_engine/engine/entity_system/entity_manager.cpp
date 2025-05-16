@@ -3,18 +3,16 @@
 
 entity_manager g_entity_mgr = entity_manager();
 
-level_t* entity_manager::create_level(const s_string& name)
+s_performance_struct_t entity_manager::create_level(const s_string& name)
 {
-	level_t* layer = levels.emplace_back();
-	layer->init_level(name);
-	return layer;
+	s_performance_struct_t level_perf_index = levels.push_back_perf_struct(level_t());
+	level_t& level = levels[level_perf_index.index];
+	level.init_level(name);
+	return level;
 }
 
-void entity_manager::destroy_level(level_t* layer, bool force)
+void entity_manager::destroy_level(const s_performance_struct_t& level_perf_index, bool force)
 {
-	if (!layer)
-		return;
-
 	const size_t count = levels.size();
 
 	for (size_t i = 0; i < count; ++i)
@@ -22,74 +20,100 @@ void entity_manager::destroy_level(level_t* layer, bool force)
 		if (!levels.is_alive(i))
 			continue;
 
-		if (levels[i].is_destroyed_or_pending())
+		auto& level = levels[i];
+
+		if (level.is_destroyed_or_pending())
 			continue;
 
-		if (&levels[i] == layer)
+		if (level.index == level_perf_index.index)
 		{
 			if (force)
 			{
-				levels[i].destroy(true);
+				level.destroy(true);
 				levels.remove(i);
 			}
 			else
 			{
-				levels[i].mark_for_destruction();
+				level.mark_for_destruction();
 			}
 			return;
 		}
 	}
 }
 
-level_t* entity_manager::get_level(uint32_t id)
+
+template <typename context_t, typename component_callback>
+void component_t::process(entity_t* owner, context_t* ctx, component_callback component_cb)
 {
-	const size_t count = levels.size();
-	uint32_t alive_index = 0;
+	if (is_destroyed_or_pending())
+		return;
 
-	for (size_t i = 0; i < count; ++i)
-	{
-		if (!levels.is_alive(i))
-			continue;
-
-		if (levels[i].is_destroyed_or_pending())
-			continue;
-
-		if (alive_index == id)
-			return &levels[i];
-
-		++alive_index;
-	}
-
-	return nullptr;
+	component_cb(owner, this, ctx);
 }
 
-level_t* entity_manager::get_level_by_name(const s_string& name)
+int somecounter = 0;
+template <typename context_t, typename component_callback, typename entity_callback>
+void entity_t::process(context_t* ctx, component_callback component_cb, entity_callback entity_cb)
 {
-	const uint32_t hash = fnv1a32(name.c_str());
-	const size_t count = levels.size();
 
-	for (size_t i = 0; i < count; ++i)
-	{
-		if (!levels.is_alive(i))
-			continue;
+	if (is_destroyed_or_pending())
+		return;
 
-		if (levels[i].is_destroyed_or_pending())
-			continue;
-
-		if (levels[i].lookup_hash_by_name == hash)
-			return &levels[i];
+	if (parent.valid()) {
+		somecounter = 1;
+		return;
 	}
 
-	return nullptr;
-}
 
-bool entity_manager::has_level(const s_string& name) {
-	return get_level_by_name(name) != nullptr;
+	const size_t component_count = components.size();
+
+	for (size_t k = 0; k < component_count; ++k)
+	{
+		if (!components.is_alive(k))
+			continue;
+
+		components[k].process(this, ctx, component_cb);
+	}
+
+	entity_cb(this, ctx);
+
+	for_each_child_recursive(
+		[&component_cb, &entity_cb](entity_t* child, void* context_ptr)
+		{
+			const size_t child_component_count = child->components.size();
+			auto& components = child->components;
+
+			for (size_t c = 0; c < child_component_count; ++c)
+			{
+				if (!components.is_alive(c))
+					continue;
+
+				components[c].process(child, context_ptr, component_cb);
+			}
+
+			entity_cb(child, context_ptr);
+		}, ctx);
+}
+template <typename context_t, typename component_callback, typename entity_callback>
+void entity_layer_t::process(context_t* ctx, component_callback component_cb, entity_callback entity_cb)
+{
+	const size_t entity_count = entities.size();
+
+	for (size_t j = 0; j < entity_count; ++j)
+	{
+		if (!entities.is_alive(j))
+			continue;
+
+		entities[j].process(ctx, component_cb, entity_cb);
+	}
 }
 
 template <typename context_t, typename component_callback, typename entity_callback>
 void entity_manager::process(context_t* ctx, component_callback component_cb, entity_callback entity_cb)
 {
+
+	entity_t current_entity;
+
 	const size_t levels_count = levels.size();
 
 	for (size_t i = 0; i < levels_count; ++i)
@@ -102,71 +126,21 @@ void entity_manager::process(context_t* ctx, component_callback component_cb, en
 		if (level.is_destroyed_or_pending())
 			continue;
 
-		const size_t layer_count = level.layers.size();
+		auto& layers = level.layers;
+
+		const size_t layer_count = layers.size();
 
 		for (size_t i = 0; i < layer_count; ++i)
 		{
-			if (!level.layers.is_alive(i))
+			if (!layers.is_alive(i))
 				continue;
 
-			entity_layer_t& layer = level.layers[i];
+			entity_layer_t& layer = layers[i];
 
 			if (layer.is_destroyed_or_pending())
 				continue;
 
-			const size_t entity_count = layer.entities.size();
-
-			for (size_t j = 0; j < entity_count; ++j)
-			{
-				if (!layer.entities.is_alive(j))
-					continue;
-
-				entity_t& e = layer.entities[j];
-
-				if (e.is_destroyed_or_pending())
-					continue;
-
-				if (e.parent)
-					continue;
-
-				const size_t component_count = e.components.size();
-				for (size_t k = 0; k < component_count; ++k)
-				{
-					if (!e.components.is_alive(k))
-						continue;
-
-					component_t& comp = e.components[k];
-
-					if (comp.is_destroyed_or_pending())
-						continue;
-
-
-					component_cb(&e, &comp, ctx);
-				}
-
-				entity_cb(&e, ctx);
-
-				e.for_each_child_recursive(
-					[&component_cb, &entity_cb]( entity_t* child, void* context_ptr)
-					{
-
-						const size_t child_component_count = child->components.size();
-						for (size_t c = 0; c < child_component_count; ++c)
-						{
-							if (!child->components.is_alive(c))
-								continue;
-
-							component_t& comp = child->components[c];
-
-							if (comp.is_destroyed_or_pending())
-								continue;
-
-							component_cb(child, &comp, context_ptr);
-						}
-
-						entity_cb(child, context_ptr);
-					}, ctx);
-			}
+			layer.process(ctx, component_cb, entity_cb);
 		}
 	}
 }
@@ -179,7 +153,7 @@ void entity_manager::on_frame_start()
 		{
 			if (comp->on_frame_start)
 				comp->on_frame_start(e, comp->_class);
-			
+
 		},
 		[](entity_t* e, void*)
 		{
@@ -408,6 +382,7 @@ void entity_manager::on_gc()
 		}
 
 		const size_t layer_count = level.layers.size();
+
 		for (size_t la = 0; la < layer_count; ++la)
 		{
 			if (!level.layers.is_alive(la))
@@ -519,17 +494,36 @@ class_t* on_create_test(entity_t* e)
 
 void entity_manager::execute_start()
 {
-	auto level = create_level("Test Level");
+	auto level = get_level(create_level("Test Level").index);
 
-	auto layer = level->create_layer("Test Layer");
+	auto layer = level->get_layer(level->create_layer("Test Layer").index);
 
-	auto transform_entity = layer->create_entity("transform_entity");
+	for (int i = 0; i < 1000000; i++)
+	{
+		auto entity = layer->get_entity(layer->create_entity("Test Entity").index);
+		auto transform = entity->add_transform_component(vector3(0.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
+		auto test_component = entity->add_component("test", on_create_test, nullptr);
+	}
 
-	auto transform = transform_entity->add_transform_component(vector3(0.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
+	auto transform_entity = layer->get_entity(layer->create_entity("transform1").index);
 
-	transform->destroy();
+	auto transform_entity2 = layer->get_entity(layer->create_entity("transform2").index);
+
+	auto transform = transform_entity->add_transform_component(vector3(4.0f, 30.0f, 10.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
+	//auto transform2 = transform_entity2->add_transform_component(vector3(40.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
+
+	std::cout << " level pointer " << level << std::endl;
+	//std::cout << " layer pointer" << layer << std::endl;
+	//std::cout << " transform entity 1 pointer " << transform_entity << std::endl;
+	//std::cout << " transform pointer " << transform << std::endl;
+
+	//level->destroy();
+
+	//static auto transform2 = transform_entity2->add_transform_component(vector3(40.0f, 0.0f, 0.0f), quat::identity(), vector3(1.0f, 1.0f, 1.0f));
+	//transform_entity->attach_to(transform_entity2);
 
 	t_on_frame.create(execute_on_frame, nullptr);
 	t_on_physics_update.create(execute_on_physics_update, nullptr);
 	t_on_gc.create(execute_gc, nullptr);
+
 }

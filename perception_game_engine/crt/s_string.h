@@ -9,61 +9,72 @@ class s_string {
 public:
     s_string() {
         m_capacity = 16;
-        if (m_buffer.allocate(m_capacity))
+		m_buffer = malloc(m_capacity);
+
+        if (m_buffer)
             m_length = 0;
     }
 
     s_string(const char* str) {
         m_length = (str ? strlen(str) : 0);
         m_capacity = m_length + 16;
-        if (m_buffer.allocate(m_capacity)) {
+        m_buffer = malloc(m_capacity);
+        if (m_buffer) {
             if (m_length)
-                memcpy(m_buffer.data(), str, m_length);
+                memcpy(m_buffer, str, m_length);
         }
     }
 
     s_string(const char* str, size_t len) {
         m_length = len;
         m_capacity = m_length + 16;
-        if (m_buffer.allocate(m_capacity)) {
-            memcpy(m_buffer.data(), str, m_length);
-        }
+        m_buffer = malloc(m_capacity);
+        if (m_buffer) 
+            memcpy(m_buffer, str, m_length);
+        
     }
 
     s_string(const s_string& other) {
         m_length = other.m_length;
         m_capacity = other.m_capacity;
-        if (m_buffer.allocate(m_capacity)) {
-            memcpy(m_buffer.data(), other.m_buffer.data(), m_length);
+        m_buffer = malloc(m_capacity);
+        if (m_buffer) {
+            memcpy(m_buffer, other.m_buffer, m_length);
         }
     }
 
     s_string& operator=(const s_string& other) {
         if (this != &other) {
-            v_heap_mem temp;
-            if (temp.allocate(other.m_capacity)) {
-                memcpy(temp.data(), other.m_buffer.data(), other.m_length);
-                m_buffer.swap(temp);
+            char* new_data = (char*)malloc(other.m_capacity);
+            if (new_data) {
+                memcpy(new_data, other.m_buffer, other.m_length);
+                free(m_buffer);
+                m_buffer = new_data;
                 m_length = other.m_length;
                 m_capacity = other.m_capacity;
             }
         }
+
         return *this;
     }
 
     s_string(s_string&& other) noexcept {
-        m_buffer = std::move(other.m_buffer);
+        m_buffer = other.m_buffer;
         m_length = other.m_length;
         m_capacity = other.m_capacity;
+
+        other.m_buffer = nullptr;
         other.m_length = 0;
         other.m_capacity = 0;
     }
 
     s_string& operator=(s_string&& other) noexcept {
         if (this != &other) {
-            m_buffer = std::move(other.m_buffer);
+            m_buffer = other.m_buffer;
             m_length = other.m_length;
             m_capacity = other.m_capacity;
+
+            other.m_buffer = nullptr;
             other.m_length = 0;
             other.m_capacity = 0;
         }
@@ -73,43 +84,49 @@ public:
     s_string(char c) {
         m_length = 1;
         m_capacity = 16;
-        if (m_buffer.allocate(m_capacity))
-            ((char*)m_buffer.data())[0] = c;
+		m_buffer = malloc(m_capacity);
+        if (m_buffer)
+            ((char*)m_buffer)[0] = c;
     }
-
 
     ~s_string() {
-        m_buffer.clear();
-        m_buffer.free();
+
+        if (m_buffer)
+           free(m_buffer);
+
+        m_buffer = nullptr;
         m_capacity = 0;
+        m_length = 0;
     }
+
 
     void reserve(size_t size) {
         if (size > m_capacity) {
-            v_heap_mem new_buf;
-            if (new_buf.allocate(size)) {
-                memcpy(new_buf.data(), m_buffer.data(), m_length);
-                m_buffer.swap(new_buf);
+            void* new_data = realloc(m_buffer, size);
+            if (new_data) {
+                m_buffer = new_data;
                 m_capacity = size;
             }
         }
     }
 
+
     void push_back(char c) {
+
         if (m_length + 1 >= m_capacity)
-            reserve(m_capacity * 2);
-        ((char*)m_buffer.data())[m_length++] = c;
+            reserve(m_capacity ? m_capacity * 2 : 16);
+
+        ((char*)m_buffer)[m_length++] = c;
     }
 
     void pop_back() {
         if (m_length > 0) {
             m_length--;
-            ((char*)m_buffer.data())[m_length] = '\0';
+            ((char*)m_buffer)[m_length] = '\0';
         }
     }
 
     void clear() {
-        m_buffer.clear();
         m_length = 0;
     }
 
@@ -117,17 +134,17 @@ public:
         size_t len = strlen(str);
         if (m_length + len >= m_capacity)
             reserve(m_length + len + 16);
-        memmove((char*)m_buffer.data() + pos + len, (char*)m_buffer.data() + pos, m_length - pos);
-        memcpy((char*)m_buffer.data() + pos, str, len);
+        memmove((char*)m_buffer + pos + len, (char*)m_buffer + pos, m_length - pos);
+        memcpy((char*)m_buffer + pos, str, len);
         m_length += len;
     }
 
     void erase(size_t pos, size_t len) {
         if (pos + len > m_length) return;
-        RtlZeroMemory((char*)m_buffer.data() + pos, len);
-        memmove((char*)m_buffer.data() + pos, (char*)m_buffer.data() + pos + len, m_length - pos - len);
+        RtlZeroMemory((char*)m_buffer + pos, len);
+        memmove((char*)m_buffer + pos, (char*)m_buffer + pos + len, m_length - pos - len);
         m_length -= len;
-        ((char*)m_buffer.data())[m_length] = '\0';
+        ((char*)m_buffer)[m_length] = '\0';
     }
 
     void replace(size_t pos, size_t len, const char* str) {
@@ -136,7 +153,7 @@ public:
     }
 
     void trim() {
-        char* data = (char*)m_buffer.data();
+        char* data = (char*)m_buffer;
         size_t start = 0, end = m_length;
         while (start < m_length && (data[start] == ' ' || data[start] == '\t')) ++start;
         while (end > start && (data[end - 1] == ' ' || data[end - 1] == '\t')) --end;
@@ -149,25 +166,25 @@ public:
     }
 
     void to_upper() {
-        char* data = (char*)m_buffer.data();
+        char* data = (char*)m_buffer;
         for (size_t i = 0; i < m_length; i++)
             if (data[i] >= 'a' && data[i] <= 'z') data[i] -= 32;
     }
 
     void to_lower() {
-        char* data = (char*)m_buffer.data();
+        char* data = (char*)m_buffer;
         for (size_t i = 0; i < m_length; i++)
             if (data[i] >= 'A' && data[i] <= 'Z') data[i] += 32;
     }
 
     const char* c_str() const {
-
-        if (!m_buffer.data())
-			return nullptr;
-
-       ((char*)m_buffer.data())[m_length] = '\0';
-       return (const char*)m_buffer.data();
+        if (!m_buffer)
+            return "";
+        
+        ((char*)m_buffer)[m_length] = '\0';
+        return ((char*)m_buffer);
     }
+
 
     int compare(const char* str) const {
         return strcmp(c_str(), str);
@@ -178,11 +195,11 @@ public:
         return found ? (found - c_str()) : static_cast<size_t>(-1);
     }
 
-    char& operator[](size_t index) { return ((char*)m_buffer.data())[index]; }
-    const char& operator[](size_t index) const { return ((char*)m_buffer.data())[index]; }
+    char& operator[](size_t index) { return ((char*)m_buffer)[index]; }
+    const char& operator[](size_t index) const { return ((char*)m_buffer)[index]; }
 
     bool operator==(const s_string& other) const {
-        return m_length == other.m_length && memcmp(m_buffer.data(), other.m_buffer.data(), m_length) == 0;
+        return m_length == other.m_length && memcmp(m_buffer, other.m_buffer, m_length) == 0;
     }
 
     bool operator!=(const s_string& other) const {
@@ -230,16 +247,16 @@ public:
     size_t size() const { return m_length; }
     bool empty() const { return m_length == 0; }
 
-    char* begin() { return (char*)m_buffer.data(); }
-    char* end() { return (char*)m_buffer.data() + m_length; }
-    const char* begin() const { return (const char*)m_buffer.data(); }
-    const char* end() const { return (const char*)m_buffer.data() + m_length; }
+    char* begin() { return (char*)m_buffer; }
+    char* end() { return (char*)m_buffer + m_length; }
+    const char* begin() const { return (const char*)m_buffer; }
+    const char* end() const { return (const char*)m_buffer + m_length; }
 
     class sw_string to_swstring() const;
 
 
 private:
-    v_heap_mem m_buffer;
+    void* m_buffer = nullptr;
     size_t m_length = 0;
     size_t m_capacity = 0;
 };

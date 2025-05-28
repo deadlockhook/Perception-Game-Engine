@@ -12,6 +12,17 @@
 #include "../global_vars.h"
 #include "../../memory/destructable_object.h"
 
+enum entity_type_t : uint16_t
+{
+	entity_type_invalid = -1,
+	entity_type_generic,
+	entity_type_dynamic_transform,
+	entity_type_static_transform,
+	entity_type_camera,
+	entity_type_light,
+	entity_type_sound_source,
+	entity_types_count
+};
 
 using class_t = void*;
 
@@ -177,22 +188,22 @@ struct relative_entity_t {
 
 	bool operator==(const relative_entity_t& other) const
 	{
-		return entity.index == other.entity.index && owner_layer.index == other.owner_layer.index && owner_level.index == other.owner_level.index;
+		return entity == other.entity && owner_layer == other.owner_layer && owner_level == other.owner_level;
 	}
 
 	bool operator!=(const relative_entity_t& other) const
 	{
-		return entity.index != other.entity.index || owner_layer.index != other.owner_layer.index || owner_level.index != other.owner_level.index;
+		return entity != other.entity || owner_layer != other.owner_layer || owner_level != other.owner_level;
 	}
 
 	bool is_equal(const relative_entity_t& other) const
 	{
-		return entity.index == other.entity.index && owner_layer.index == other.owner_layer.index && owner_level.index == other.owner_level.index;
+		return entity == other.entity && owner_layer == other.owner_layer && owner_level == other.owner_level;
 	}
 
 	bool is_equal(const s_performance_struct_t& other_entity, const s_performance_struct_t& other_owner_layer, const s_performance_struct_t& other_owner_level) const
 	{
-		return entity.index == other_entity.index && owner_layer.index == other_owner_layer.index && owner_level.index == other_owner_level.index;
+		return entity == other_entity && owner_layer == other_owner_layer && owner_level == other_owner_level;
 	}
 
 	s_performance_struct_t entity;
@@ -237,19 +248,19 @@ struct component_indexed_t
 	}
 	bool operator==(const component_indexed_t& other) const
 	{
-		return comp.index == other.comp.index && owner.is_equal(other.owner);
+		return comp == other.comp && owner.is_equal(other.owner);
 	}
 	bool operator!=(const component_indexed_t& other) const
 	{
-		return comp.index != other.comp.index || owner != other.owner;
+		return comp != other.comp || owner != other.owner;
 	}
 	bool is_equal(const component_indexed_t& other) const
 	{
-		return comp.index == other.comp.index && owner.is_equal(other.owner);
+		return comp == other.comp && owner.is_equal(other.owner);
 	}
 	bool is_equal(const s_performance_struct_t& other_self, const relative_entity_t& other_owner) const
 	{
-		return comp.index == other_self.index && owner.is_equal(other_owner);
+		return comp == other_self && owner.is_equal(other_owner);
 	}
 
 	bool valid() { return comp.index != invalid_index; }
@@ -287,20 +298,19 @@ public:
 	entity_t() = default;
 	~entity_t() = default;
 
+	template <typename context_t, typename component_callback, typename entity_callback>
+	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
+
 	void destroy(bool force = false);
 
-	bool construct(
+	bool construct(const entity_type_t& type,
 		const s_performance_struct_t& owner_layer, const s_performance_struct_t& owner_level,
 		const s_string& n, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr
 	);
 
-	template <typename context_t, typename component_callback, typename entity_callback>
-	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
-
 	void attach_to(entity_t* e);
 	void detach();
 	void detach_all_children();
-
 
 	entity_t* get_root();
 	void for_each_child_recursive(entity_iter_fn_t fn, void* userdata);
@@ -332,7 +342,7 @@ public:
 
 	s_performance_struct_t add_transform_component(const vector3& position = vector3(0.0f, 0.0f, 0.0f), const quat& rotation = quat::identity(),
 		const vector3& scale = vector3(1.0f, 1.0f, 1.0f));
-	
+
 	bool remove_component(const s_string& name);
 	bool remove_component(uint32_t hash);
 
@@ -340,12 +350,12 @@ public:
 	{
 		if (perf_index.index >= components.size())
 			return nullptr;
-		
+
 		auto& comp = components[perf_index.index];
-		
+
 		if (!components.is_alive(perf_index.index))
 			return nullptr;
-		
+
 		if (comp.is_destroyed_or_pending())
 			return nullptr;
 
@@ -360,7 +370,7 @@ public:
 			return nullptr;
 
 		auto& comp = components[perf_index.index];
-		
+
 		if (!components.is_alive(perf_index.index))
 			return nullptr;
 
@@ -408,32 +418,36 @@ public:
 	entity_layer_t() = default;
 	~entity_layer_t() = default;
 
-	void init_layer(const s_performance_struct_t& owner_level, const s_string& n);
-	
 	template <typename context_t, typename component_callback, typename entity_callback>
 	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
 
-	s_performance_struct_t create_entity(const s_string& name, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr);
+	void init_layer(const s_performance_struct_t& owner_level, const s_string& n);
+
+	s_performance_struct_t create_entity(const entity_type_t& type, const s_string& name, construct_fn_t construct_fn = nullptr, destruct_fn_t deconstruct_fn = nullptr);
 
 	s_performance_vector<component_indexed_t>& get_components_by_hash(uint32_t hash);
-	
-	__forceinline entity_t* get_entity(const uint64_t& layer_perf_index)
+
+	__forceinline entity_t* get_entity(const uint64_t& layer_perf_index, const entity_type_t& type)
 	{
+		auto entities = get_list(type);
+
 		if (layer_perf_index >= entities.size())
 			return nullptr;
-		
+
 		auto& entity = entities[layer_perf_index];
-		
+
 		if (!entities.is_alive(layer_perf_index) || entity.is_destroyed_or_pending())
 			return nullptr;
 
 		return &entity;
 	}
 
+	s_performance_vector<entity_t>& get_list(entity_type_t type) { return entities_map[type]; }
+
 	void destroy(bool force = false);
 public:
 	s_performance_struct_t owner_level;
-	s_performance_vector<entity_t> entities;
+	s_map< entity_type_t, s_performance_vector<entity_t>> entities_map;
 	s_map<uint32_t, s_performance_vector<component_indexed_t>> map_components;
 };
 
@@ -443,11 +457,15 @@ public:
 	level_t() = default;
 	~level_t() = default;
 public:
+
+	template <typename context_t, typename component_callback, typename entity_callback>
+	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
+
 	void init_level(const s_string& n);
 
 	s_performance_struct_t create_layer(const s_string& name);
 	void destroy_layer(const s_performance_struct_t& layer_perf_index);
-	
+
 	__forceinline entity_layer_t* get_layer(const uint64_t& layer_perf_index)
 	{
 		if (layer_perf_index >= layers.size())
@@ -479,9 +497,6 @@ public:
 	s_performance_struct_t create_level(const s_string& name);
 	void destroy_level(const s_performance_struct_t& level_perf_index, bool force = false);
 
-	template <typename context_t, typename component_callback, typename entity_callback>
-	void process(context_t* ctx, component_callback component_cb, entity_callback entity_cb);
-
 	__forceinline level_t* get_level(const uint64_t& level_perf_index)
 	{
 		if (level_perf_index >= levels.size())
@@ -498,20 +513,20 @@ public:
 	__forceinline entity_t* get_entity_by_relation(const relative_entity_t& relation)
 	{
 		auto level = get_level(relation.owner_level.index);
-		
+
 		if (!level)
 			return nullptr;
 
 		auto layer = level->get_layer(relation.owner_layer.index);
-	
+
 		if (!layer)
 			return nullptr;
 
-		return layer->get_entity(relation.entity.index);
+		return layer->get_entity(relation.entity.index, (entity_type_t)relation.entity.type);
 	}
 
 	__forceinline entity_t* get_entity_by_perf_index(const uint64_t& level_perf_index, const uint64_t& layer_perf_index
-		, const uint64_t& entity_perf_index)
+		, const uint64_t& entity_perf_index , const uint16_t& entity_type)
 	{
 		auto level = get_level(level_perf_index);
 
@@ -523,7 +538,7 @@ public:
 		if (!layer)
 			return nullptr;
 
-		return layer->get_entity(entity_perf_index);
+		return layer->get_entity(entity_perf_index, (entity_type_t)entity_type);
 	}
 
 	void on_physics_start();
@@ -549,7 +564,8 @@ public:
 	void execute_stop();
 
 private:
-	thread_t t_on_frame;
+	thread_t t_on_frame_static_entities;
+	thread_t t_on_frame_dynamic_entities;
 	thread_t t_on_physics_update;
 	thread_t t_on_gc;
 public:
@@ -559,6 +575,9 @@ public:
 
 extern entity_manager g_entity_mgr;
 
-DWORD WINAPI execute_on_physics_update(LPVOID param);
-DWORD WINAPI execute_on_frame(LPVOID param);
-DWORD WINAPI execute_gc(LPVOID param);
+DWORD WINAPI thread_frame_static_entities(LPVOID param);
+DWORD WINAPI thread_cull_lod_and_render_submission(LPVOID param);
+DWORD WINAPI thread_frame_dynamic_entities(LPVOID param);
+DWORD WINAPI thread_physics_dynamic_entities(LPVOID param);
+DWORD WINAPI thread_garbage_collection(LPVOID param);
+DWORD WINAPI thread_streaming_and_world_management(LPVOID param);

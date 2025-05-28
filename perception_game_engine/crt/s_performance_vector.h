@@ -14,13 +14,23 @@ struct s_stable_vector_iterator
 struct s_performance_struct_t
 {
 	s_performance_struct_t() = default;
-	s_performance_struct_t(uint64_t index) : index(index) {}
-	s_performance_struct_t(const s_performance_struct_t& other) : index(other.index) {}
+	s_performance_struct_t(uint64_t index) : index(index), type(0) {}
+	s_performance_struct_t(uint64_t index, uint16_t type) : index(index), type(type) {}
+	s_performance_struct_t(const s_performance_struct_t& other) : index(other.index), type(other.type) {}
 
 	static s_performance_struct_t invalid() { return s_performance_struct_t{ invalid_index }; }
 
+    bool operator!=(const s_performance_struct_t& other) const { return index != other.index || type != other.type; }
+	bool operator==(const s_performance_struct_t& other) const { return index == other.index && type == other.type; }
+
 	bool valid() { return index != invalid_index; }
+	bool is_equal(const s_performance_struct_t& other) const { return index == other.index && type == other.type; }
+	bool is_equal(const uint64_t& index, const uint16_t& type) const { return this->index == index && this->type == type; }
+
     uint64_t index = 0;
+    uint16_t type = 0;
+
+
 };
 
 template <typename T>

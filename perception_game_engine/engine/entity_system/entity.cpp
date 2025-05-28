@@ -72,16 +72,17 @@ void entity_t::destroy(bool force)
 }
 
 
-bool entity_t::construct(const s_performance_struct_t& owner_layer, const s_performance_struct_t& owner_level,
+bool entity_t::construct(const entity_type_t& type, const s_performance_struct_t& owner_layer, const s_performance_struct_t& owner_level,
 	const s_string& n, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn
 ) {
+	this->type = type;
 	this->owner_layer = owner_layer;
 	this->owner_level = owner_level;
 	name = s_pooled_string(n);
 	lookup_hash_by_name = name.hash;
 
 	parent = relative_entity_t();
-	self = relative_entity_t(s_performance_struct_t{ index }, owner_layer, owner_level);
+	self = relative_entity_t(s_performance_struct_t{ index, type }, owner_layer, owner_level);
 
 	on_construct = construct_fn;
 	on_destruct = deconstruct_fn;

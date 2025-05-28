@@ -12,16 +12,18 @@ s_performance_vector<component_indexed_t>& entity_layer_t::get_components_by_has
 	return map_components[hash];
 }
 
-s_performance_struct_t entity_layer_t::create_entity(
+s_performance_struct_t entity_layer_t::create_entity(const entity_type_t& type,
 	const s_string& name, construct_fn_t construct_fn, destruct_fn_t deconstruct_fn
 )
 {
 	entity_t entity;
-	if (entity.construct(s_performance_struct_t{ index }, s_performance_struct_t{ owner_level.index }, name, construct_fn, deconstruct_fn))
+	if (entity.construct(type, s_performance_struct_t{ index }, s_performance_struct_t{ owner_level.index }, name, construct_fn, deconstruct_fn))
 	{
+		auto entities = get_list(type);
+
 		auto perf_index = entities.push_back_perf_struct(entity);
 		
-		auto _entity = get_entity(perf_index.index);
+		auto _entity = get_entity(perf_index.index, type);
 		_entity->index = perf_index.index;
 		_entity->self.entity.index = perf_index.index;
 
@@ -39,15 +41,20 @@ void entity_layer_t::destroy(bool force)
 
 	if (force)
 	{
-		const size_t entity_count = entities.size();
-		for (size_t e = 0; e < entity_count; ++e)
+		for (auto& map : entities_map)
 		{
-			if (!entities.is_alive(e))
-				continue;
+			auto& entities = map.value;
 
-			entity_t& entity = entities[e];
-			entity.destroy(true);
-			entities.remove(e);
+			const size_t entity_count = entities.size();
+			for (size_t e = 0; e < entity_count; ++e)
+			{
+				if (!entities.is_alive(e))
+					continue;
+
+				entity_t& entity = entities[e];
+				entity.destroy(true);
+				entities.remove(e);
+			}
 		}
 
 		post_destruction(); 

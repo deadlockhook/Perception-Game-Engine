@@ -32,5 +32,6 @@ typedef wchar_t             wchar;
 #define FORCE_INLINE        __forceinline
 #define NO_INLINE           __declspec(noinline)
 #define ALIGN(x)            __declspec(align(x))
-
+#define API_EXPORT           __declspec(dllexport)
+#define API_IMPORT           __declspec(dllimport)
 #endif 

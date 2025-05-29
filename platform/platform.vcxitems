@@ -19,5 +19,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)mem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mtx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)platform.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)vmm.h" />
   </ItemGroup>
 </Project>

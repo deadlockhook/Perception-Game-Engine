@@ -15,6 +15,7 @@ struct page_info_t
 class virtual_memory_pool
 {
 public:
+
     virtual_memory_pool()
     {
         if (!initialize())
@@ -22,7 +23,28 @@ public:
             //throw some error or smth
         }
     }
+
+    ~virtual_memory_pool()
+    {
+       // destroy();
+    }
+
 public:
+
+    void destroy()
+    {
+		if (pool)
+		{
+			virtual_free_release(pool);
+			pool = nullptr;
+			pages = nullptr;
+			page_count = 0;
+			metadata_page_count = 0;
+			metadata_size = 0;
+			total_reserved_size = 0;
+		}
+    }
+
     bool initialize()
     {
         if (pool)
@@ -93,7 +115,15 @@ public:
 
         ul64 new_page_count = (new_size + _page_size - 1) / _page_size;
 
-        if (new_page_count <= old_page_count)
+        if (new_page_count < old_page_count)
+        {
+            ul64 shrink_size = new_page_count * _page_size;
+            bool ok = shrink(ptr, shrink_size);
+            mgr_lock.unlock_exclusive();
+            return ok ? ptr : nullptr;
+        }
+
+        if (new_page_count == old_page_count)
         {
             mgr_lock.unlock_exclusive();
             return ptr;
@@ -256,7 +286,8 @@ public:
 
         decomit(address, count * _page_size);
     }
-    void get_stats()
+
+    void print_stats()
     {
         pltf_shared_guard lock(mgr_lock);
 
@@ -279,6 +310,7 @@ public:
         std::cout << "Metadata:       " << metadata_bytes / 1024 << " KB (" << metadata_page_count << " pages, " << metadata_bytes << " bytes)\n";
         std::cout << "===========================\n";
     }
+
 private:
     void* pool = nullptr;
     page_info_t* pages = nullptr;
@@ -288,3 +320,5 @@ private:
     ul64 metadata_size = 0;
     ul64 total_reserved_size = 0;
 };
+
+inline virtual_memory_pool memory_pool;

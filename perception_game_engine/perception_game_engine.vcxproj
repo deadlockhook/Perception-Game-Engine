@@ -18,6 +18,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="entry.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -137,100 +140,6 @@
       </EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="crt\safe_crt.cpp" />
-    <ClCompile Include="crt\s_string.cpp" />
-    <ClCompile Include="crt\s_string_pool.cpp" />
-    <ClCompile Include="engine\component_system\transform_instance.cpp" />
-    <ClCompile Include="engine\entity_system\component.cpp" />
-    <ClCompile Include="engine\entity_system\ecs_execute.cpp" />
-    <ClCompile Include="engine\entity_system\entity.cpp" />
-    <ClCompile Include="engine\entity_system\entity_layer.cpp" />
-    <ClCompile Include="engine\entity_system\entity_manager.cpp" />
-    <ClCompile Include="engine\entity_system\level.cpp" />
-    <ClCompile Include="engine\global_vars.cpp" />
-    <ClCompile Include="engine\hwnd\window_manager.cpp" />
-    <ClCompile Include="engine\input_system\input_system.cpp" />
-    <ClCompile Include="engine\engine.cpp" />
-    <ClCompile Include="engine\threading\thread_storage.cpp" />
-    <ClCompile Include="engine\threading\thread_system.cpp" />
-    <ClCompile Include="entry.cpp" />
-    <ClCompile Include="exception\fail.cpp" />
-    <ClCompile Include="exception\exception_handler.cpp" />
-    <ClCompile Include="math\aabb.cpp" />
-    <ClCompile Include="math\box.cpp" />
-    <ClCompile Include="math\frustum.cpp" />
-    <ClCompile Include="math\geom\geom.cpp" />
-    <ClCompile Include="math\geom\kdop.cpp" />
-    <ClCompile Include="math\geom\polyhedron.cpp" />
-    <ClCompile Include="math\geom\shapes\capsule.cpp" />
-    <ClCompile Include="math\geom\shapes\cone.cpp" />
-    <ClCompile Include="math\geom\shapes\cylinder.cpp" />
-    <ClCompile Include="math\geom\shapes\disc.cpp" />
-    <ClCompile Include="math\geom\shapes\ellipsoid.cpp" />
-    <ClCompile Include="math\geom\shapes\line.cpp" />
-    <ClCompile Include="math\geom\shapes\segment.cpp" />
-    <ClCompile Include="math\geom\shapes\sphere.cpp" />
-    <ClCompile Include="math\geom\shapes\torus.cpp" />
-    <ClCompile Include="math\geom\shapes\triangle.cpp" />
-    <ClCompile Include="math\matrix4x4.cpp" />
-    <ClCompile Include="math\obb.cpp" />
-    <ClCompile Include="math\plane.cpp" />
-    <ClCompile Include="math\quat.cpp" />
-    <ClCompile Include="math\ray.cpp" />
-    <ClCompile Include="memory\addr.cpp" />
-    <ClCompile Include="memory\mem.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="common.h" />
-    <ClInclude Include="crt\atomic.h" />
-    <ClInclude Include="crt\inline_crt.h" />
-    <ClInclude Include="crt\s_map.h" />
-    <ClInclude Include="crt\s_performance_map.h" />
-    <ClInclude Include="crt\s_performance_vector.h" />
-    <ClInclude Include="crt\s_string_pool.h" />
-    <ClInclude Include="crt\triple_buffer.h" />
-    <ClInclude Include="engine\component_system\default_component_hashes.h" />
-    <ClInclude Include="engine\component_system\transform_instance.h" />
-    <ClInclude Include="engine\component_system\physics_asset.h" />
-    <ClInclude Include="engine\entity_system\entity_system.h" />
-    <ClInclude Include="engine\global_vars.h" />
-    <ClInclude Include="engine\hwnd\window_manager.h" />
-    <ClInclude Include="engine\input_system\input_system.h" />
-    <ClInclude Include="engine\render\render_device.h" />
-    <ClInclude Include="engine\setup.h" />
-    <ClInclude Include="engine\threading\thread_storage.h" />
-    <ClInclude Include="engine\threading\thread_system.h" />
-    <ClInclude Include="exception\fail.h" />
-    <ClInclude Include="crt\s_vector.h" />
-    <ClInclude Include="definitions.h" />
-    <ClInclude Include="exception\exception_handler.h" />
-    <ClInclude Include="math\aabb.h" />
-    <ClInclude Include="math\box.h" />
-    <ClInclude Include="math\frustum.h" />
-    <ClInclude Include="math\geom\geom.h" />
-    <ClInclude Include="math\geom\kdop.h" />
-    <ClInclude Include="math\geom\polyhedron.h" />
-    <ClInclude Include="math\math_defs.h" />
-    <ClInclude Include="math\matrix4x4.h" />
-    <ClInclude Include="math\obb.h" />
-    <ClInclude Include="math\pixel_vector2.h" />
-    <ClInclude Include="math\plane.h" />
-    <ClInclude Include="math\quat.h" />
-    <ClInclude Include="math\ray.h" />
-    <ClInclude Include="math\transform.h" />
-    <ClInclude Include="math\vector2.h" />
-    <ClInclude Include="math\vector3.h" />
-    <ClInclude Include="math\vector4.h" />
-    <ClInclude Include="memory\addr.h" />
-    <ClInclude Include="memory\destructable_object.h" />
-    <ClInclude Include="memory\mem.h" />
-    <ClInclude Include="crt\safe_crt.h" />
-    <ClInclude Include="crt\s_string.h" />
-    <ClInclude Include="platform\atomic_datatype.h" />
-    <ClInclude Include="platform\platform.h" />
-    <ClInclude Include="serialize\fnva_hash.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
